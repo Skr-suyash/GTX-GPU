@@ -55,14 +55,21 @@ descriptors and epoch-based group commit. It changes four things for the SIMT ex
 reserve slots cooperatively and never copies a block under writers;
 (iii)~\emph{wait-free epoch registration} with a single advancer lane that publishes a read frontier; and
 (iv)~a \emph{serializable} mode that uses Silo-style ordering (epoch fixed before read validation).
-Each benchmarked history is validated operation by operation by a checker for snapshot isolation and
-serializability. During development the checker found five protocol defects, all fixed before any measurement.
-On an RTX~4060 Laptop GPU, \sys{} is 14--23$\times$ faster than two-phase locking and a TL2 word-STM on the same
+Every benchmarked history is validated operation by operation by a checker for snapshot isolation and
+serializability, and a paper proof against the PTX memory model covers the protocol. Together they found eight
+protocol defects, two of them latent ordering gaps that only the proof could expose.
+On an RTX~4060 Laptop GPU, \sys{} is 14--21$\times$ faster than two-phase locking and a TL2 word-STM on the same
 storage when 90\% of transactions are snapshot readers. With concurrent readers on Zipf workloads, serializable
-read-write mixes, large transactions or hub contention, the advantage grows to two to four orders of magnitude.
-\sys{} is 8.6--20$\times$ faster than GPMA+ on identical update streams. We also report where \sys{} loses:
-uncontended small transactions (0.47--0.76$\times$ of 2PL), write-only contention against a degree-free STM, and
-2.5--20$\times$ memory overhead because version reclamation is not yet implemented.
+read-write mixes on skewed graphs, large transactions or hub contention, the advantage grows to two to four orders of
+magnitude. On real SNAP graphs it wins by one to three orders of magnitude where the graph has hubs, and it is
+0.66--0.84$\times$ of 2PL where it has none. \sys{} is 6.6--15.2$\times$ faster than GPMA+ on identical streams that
+GPMA+ applies correctly. Versions are not reclaimed while a kernel runs, so memory grows with every write. A merge-based
+reclamation scheme was built and falsified against criteria fixed in advance. A quiescent compaction between kernel
+launches instead keeps memory proportional to the live graph over 64-round update streams, where the uncompacted store runs out
+within 1--7 rounds. With the tuned policy it costs 19--30\% of throughput on churn. On a read-heavy stream the
+registered policy is 36\% faster. We also report where \sys{} loses: uncontended small
+transactions (0.37--0.56$\times$ of 2PL), write-only work against a degree-free STM, and 3--19$\times$ the memory of
+pre-sized hash tables.
 \end{abstract}
 
 \begin{CCSXML}
@@ -130,17 +137,24 @@ serializability (SER). GTX provides SI only~\cite{gtx}. The GPU-specific mechani
 validate-then-CAS conflict detection, block generations with lazy sealing, warp-cooperative reservation on a fused
 generation/fill word, wait-free epoch registration with a one-lane advancer, and Silo-ordered serializable
 validation~\cite{silo}.
-\item \textbf{A correctness methodology for GPU transaction protocols} (\S\ref{sec:correct}). Six invariants and their
-memory-order requirements, plus a history checker (C1--C5) that validates \emph{every} read, no-op write and scan
-against its snapshot, write-write exclusion, the final state and serialization-graph acyclicity. The checker found five
-protocol defects during development and rejects three deliberately broken protocols, two of which pass the
-final-state check.
+\item \textbf{A correctness methodology for GPU transaction protocols} (\S\ref{sec:correct}). Six invariants, a paper
+proof of SI and serializability against the PTX memory model with every lemma mapped to a code site and a test, and a
+history checker (C1--C5) that validates \emph{every} read, no-op write and scan against its snapshot, write-write
+exclusion, the final state and serialization-graph acyclicity. The checker and stress tests found six protocol
+defects and the proof two more, and the checker rejects every observable deliberately broken protocol, several of
+which pass the final-state check.
 \item \textbf{A matched evaluation} (\S\ref{sec:eval}). Same workload streams and seeds against strict two-phase locking,
-a TL2-style word STM~\cite{tl2} with and without a degree word, non-transactional CAS updates, and GPMA+~\cite{gpma}.
-Results are medians of five repetitions with 95\% bootstrap confidence intervals, and losses are reported next to wins.
-\item \textbf{Falsifiable design hypotheses} (\S\ref{sec:ablation}). Each GPU mechanism was stated with a falsification
-criterion before it was measured. One was falsified as a primary mechanism (cooperative reservation), one was
-supported (destination-precise conflicts), and one was not falsified (epoch commit groups).
+a TL2-style word STM~\cite{tl2} with and without a degree word, non-transactional CAS updates, and GPMA+~\cite{gpma},
+on synthetic streams, four real SNAP graphs and a batch-size sweep. Results are medians of five repetitions with 95\%
+bootstrap confidence intervals, and losses are reported next to wins.
+\item \textbf{Falsifiable design hypotheses} (\S\ref{sec:ablation}, \S\ref{sec:memory}). Each mechanism was stated with
+a falsification criterion before it was measured. Cooperative reservation was falsified as a primary mechanism,
+destination-precise conflicts were supported, and epoch commit groups were not falsified. Version reclamation by
+generation merging (M4) was built, proven and gated, and then falsified on time and memory.
+\item \textbf{Bounded memory by quiescent compaction} (\S\ref{sec:memory}). Memory was measured before any redesign:
+most of the overhead is layout, not garbage. Method~5 rebuilds the store from the graph visible at the frontier
+between kernel launches. It is proven, gated with mutations, and measured on long update streams that write several
+times the arena.
 \end{enumerate}
 
 %% ===================================================================================================================
@@ -242,7 +256,7 @@ newer \textsc{ins} version. The state of an edge for a transaction is the operat
 Structure & Contents \\
 \midrule
 \code{Delta} (32 B) & \code{dstop} (dst:30, op:2), \code{prev}, \code{owner} (txid), \code{cts}, \code{its} (0, \code{TAG|txid}, or epoch); one arena, bump-allocated per block \\
-\code{Block} (32 B) & \code{base, cap, nch, chBase, prevGen}; a \emph{generation}; capacity grows by $8\times$ \\
+\code{Block} (32 B) & \code{base, cap, nch, chBase, prevGen}; a \emph{generation}; capacity grows by $8\times$ (\code{growShift}~3, default) or $2\times$ \\
 heads \code{H[]} & \code{idx:31 | SEAL:1}; \code{nch} $=$ \code{cap/chRatio} heads per generation (default: one per slot) \\
 \code{vcur[u]} & current generation, read by readers; published \emph{before} \code{vfill} \\
 \code{vfill[u]} (64 b) & \code{(generation<<32) | slots reserved}; writers' reservation word \\
@@ -256,7 +270,7 @@ heads \code{H[]} & \code{idx:31 | SEAL:1}; \code{nch} $=$ \code{cap/chRatio} hea
 \subsection{Block generations and delta chains}
 GTX consolidates a full edge-delta block into a larger one. \sys{} never copies a block while writers are active.
 When a vertex's current block fills, exactly one writer (the lane whose reservation lands on slot \code{cap}) allocates
-a generation eight times larger. The new generation is linked in \emph{front} of the old one through \code{prevGen}
+a generation eight times larger (by default; \S\ref{sec:memory} measures $2\times$). The new generation is linked in \emph{front} of the old one through \code{prevGen}
 and published by release stores to \code{vcur[u]} and then \code{vfill[u]}. Each generation has its own chain heads,
 indexed by a hash of the destination; the default is one head per slot. A chain may therefore continue into older
 generations. To keep the order of versions of one key total, the first writer of generation $g{+}1$ that walks an
@@ -410,8 +424,8 @@ whole warp strides one vertex (warp-cooperative scan), which is essential for po
 \subsection{Cost model}
 Table~\ref{tab:cost} gives the uncontended cost of one effective write. The dominant fixed cost compared with a
 lock-based hash table is versioning: a 32-byte delta, a chain head and descriptor/epoch bookkeeping per attempt.
-Scans cost $\Theta$(slots in all generations), including aborted and voided slots until reclamation, which is
-specified but not implemented (\S\ref{sec:limits}).
+Scans cost $\Theta$(slots in all generations), including aborted and voided slots, until the next quiescent
+compaction rebuilds the store (\S\ref{sec:memory}).
 
 \begin{table}[t]
 \caption{Cost per effective write (uncontended).}
@@ -466,6 +480,28 @@ Aborts are no-wait (first-updater-wins). Livelock under identical-edge contentio
 mitigated by randomized exponential backoff. Commit registration is wait-free. The advancer waits only for registered
 committers, so in SER mode the frontier's staleness is bounded by the longest validation.
 
+\subsection{Paper proof}
+\label{sec:proof}
+The repository contains a hand proof (\code{design/proof.md}) that every history of the engine satisfies SI in SI mode
+and serializability in SER mode, against the PTX memory model. It is not machine-checked. It assumes device-scope
+atomics, ordering only from \code{\_\_syncwarp} and fences (never from warp votes or shuffles, which the CUDA guide
+states imply no memory ordering), no slot or descriptor reuse within a kernel run, and quiescence between launches.
+Five lemmas on descriptors and epochs (finality, exact registration, frontier safety, fresh epochs, a stable
+visible/invisible split) give Theorem~1 (a total per-key version order equal to commit order), Theorem~2 (reads and
+no-op writes return the snapshot state), Theorem~3 (scans), Theorem~4 (SI) and Theorem~5 (SER, via Silo ordering).
+Section~8 of the proof extends it to the M4 reclamation machinery and \S9 to quiescent compaction (Theorem~6,
+\S\ref{sec:memory}). Each lemma names the code site it depends on and the test or mutation that exercises it.
+
+Writing the proof found two latent ordering gaps that no test had observed (D11, D12 in Table~\ref{tab:defects}).
+Commit registration ordered the lanes of a warp only through \code{\_\_ballot\_sync}/\code{\_\_shfl\_sync}, and in
+cooperative scans every lane loaded the generation list itself although only one lane held the frontier acquire.
+Both are fixed (\code{\_\_syncwarp} around registration; the scanning lane reads the generation list and broadcasts
+it), at a cost of at most 1\%.
+
+The proof covers every combination of SER/SI, cooperative reservation, conflict granularity, scan mode and pre-walk
+for the base protocol. One M4 mutation (per-lane generation lists in cooperative scans) is not observable on this GPU
+because of SIMT lockstep. It is covered by the proof alone.
+
 \subsection{History checker}
 \label{sec:checker}
 A final-state comparison (``the logged edge set equals the device's edge set'') cannot detect a lost update between two
@@ -490,14 +526,19 @@ configurations spanning SI/SER, cooperative reservation on/off, destination/chai
 per-lane/cooperative scans. All 48 histories pass C1--C5. A \emph{write-skew probe} must show the anomaly under SI
 and must not show it under SER: SI produced 16,000 serialization-graph back edges, SER produced 0, and both pass their
 respective checks. A tiny-arena test forces resource exhaustion; the committed prefix remains consistent at every arena
-size. Every benchmark configuration in \S\ref{sec:eval} also passes the checker in a reduced-size run, and so do all
-baselines in SER mode.
+size. The full gate has nine sections (A--I): the base suite, the probe, mutations, exhaustion, the optimistic
+pre-walk, M4 histories and mutations, exhaustion under reuse, and M5 multi-round compaction
+(\S\ref{sec:memory}). It runs 219 cases (110 of them in section I) with 0 unexpected results (\code{results/m5/gate\_full.txt}). In the 2026-11 campaign, 50 further
+history-checked runs cover every benchmarked system, the bulk loader, batch mode and the SNAP file path. All pass,
+and so do all baselines in SER mode.
 
 \paragraph{Mutation testing.} To show the checker is sensitive, three broken protocols are compiled in
 (Table~\ref{tab:mut}). The checker rejects all three. The prototype-style final-state check accepts two of them.
+Further mutations target M4 (four of five observable, all four rejected) and M5 (three rejected, one informational;
+\S\ref{sec:memory}).
 
 \begin{table}[t]
-\caption{Mutation tests: violations reported by each check.}
+\caption{Mutation tests: violations reported by each check (2026-11 gate).}
 \label{tab:mut}
 \footnotesize
 \setlength{\tabcolsep}{2.5pt}
@@ -505,21 +546,23 @@ baselines in SER mode.
 \toprule
 Mutation & Final-state check & History checker \\
 \midrule
-no ww check & passes (0/0) & 4,386 C3; 10,984 same-epoch writers; 11,507 extra final edges; 6,557 DSG back edges \\
-ignore snapshot & passes (0/0) & 9,658 wrong reads; 5,382 wrong scans; 301,431 DSG back edges \\
-dirty reads & 1,133/340 & 11,411 wrong reads; 6,972 wrong scans; 271,175 DSG back edges \\
+no ww check & passes (0/0) & 4,186 C3; 10,379 same-epoch writers; 10,137 extra final edges; 7,055 DSG back edges \\
+ignore snapshot & passes (0/0) & 9,717 wrong reads; 5,721 wrong scans; 309,371 DSG back edges \\
+dirty reads & 944/324 & 10,670 wrong reads; 7,168 wrong scans; 302,858 DSG back edges \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Defects found during development}
 \label{sec:defects}
-Table~\ref{tab:defects} lists the protocol defects found by the checker, by stress tests or by memory-model reasoning.
-All were found and fixed \emph{before} any benchmark in \S\ref{sec:eval} was recorded. D9 teaches a general lesson: a
-diagnostic mechanism (a watchdog) must never trade safety for liveness.
+Table~\ref{tab:defects} lists the protocol defects found by the checker, by stress tests, by memory-model reasoning
+or by the proof. D5--D9 were found and fixed before the first benchmark was recorded. D10 is in the M4 reclamation code
+(off by default) and was found by its gate. D11 and D12 were found by the proof and never observed; they were fixed
+before the 2026-11 campaign. D9 teaches a general lesson: a diagnostic mechanism (a watchdog) must never trade safety
+for liveness.
 
 \begin{table*}[t]
-\caption{Protocol defects found and fixed before benchmarking.}
+\caption{Protocol defects found and fixed.}
 \label{tab:defects}
 \footnotesize
 \begin{tabular}{@{}lP{2.6cm}P{4.3cm}P{4.2cm}P{3.5cm}@{}}
@@ -531,6 +574,9 @@ D6 & checker C5 & epoch fixed after read validation; rw edge runs backwards in c
 D7 & reasoning (C1 risk) & read-only commit at $cts{=}rts$ would expose voided slots as committed in the past & read-only commit publishes \textsc{aborted} & suite and check matrix pass \\
 D8 & forensic scan instrumentation & relaxed reservation RMW: no happens-before to the grower's generation publication & reservation RMW acq\_rel & memory-order argument; suite pass \\
 D9 & checker C1 + decision codes & harness watchdog left the advancer's wait after 20 s and published the frontier early & watchdog only flags; run declared invalid; publishing stops & 4/4 stress iterations and 48 histories pass \\
+D10 & M4 gate (abort statistics) & reclaimer zeroed only \code{owner}/\code{dstop} of freed slots; a stale nonzero \code{cts} decided visibility for a reused slot & zero all 32 bytes of every freed delta & gate A--H as expected; proof L14 \\
+D11 & proof (latent) & commit registration ordered lanes only by \code{\_\_ballot\_sync}/\code{\_\_shfl\_sync}, which imply no memory ordering & \code{\_\_syncwarp} before and after the registration RMW & gate 67/67; cost within noise \\
+D12 & proof review (latent) & in cooperative scans each lane loaded the generation list; only the scanning lane holds the frontier acquire & scanning lane reads the list and broadcasts it & gate 67/67; mutation not observable (proof only) \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -566,6 +612,8 @@ $|V| = 2^{20}$, the initial graph has 4M edges, and each run has about 1M operat
 ($2^{20}/K$ transactions of $K$ operations, or $2^{18}$ transactions with $K{=}4$). Sources are uniform, hub
 (a fraction of operations on one vertex), Zipf($s{=}1$) or R-MAT. Mixes include inserts, deletes, churn
 (50/50 insert/delete), reads, identical-edge contention, and 50\% or 90\% read-only transactions with 10\% scans.
+Real graphs (\S\ref{sec:snap}) are four SNAP graphs replayed as sliding-window streams. Long-run memory experiments
+(\S\ref{sec:memory}) replay a stream in rounds of $2^{18}$ transactions, one kernel launch per round.
 
 \paragraph{Methodology.} We time the single transactional kernel with CUDA events; initial loading and checking are
 excluded. Each (scenario, system) runs in its own process with one warm-up and five measured repetitions, and a 90~s
@@ -574,18 +622,27 @@ operations). Speedup is the ratio of median committed throughput, with a 95\% bo
 repetitions. Latency is measured per transaction with \code{\%globaltimer} from the first attempt to commit, including
 retries.
 
+\paragraph{Two campaigns.} All numbers in this section come from the 2026-11 campaign, measured with the final
+binaries in one session, unless marked otherwise. Every kernel ran 1.4--2.7$\times$ faster in
+2026-11 than in an earlier 2026-09 campaign. The September source rebuilt with the November compiler times
+identically, so the shift is not caused by the code or the compiler. Its system-side cause (driver version,
+power/clock state) was not isolated. Absolute numbers from the two campaigns are therefore never mixed, and every ratio is
+taken within one campaign. Ratios also moved between campaigns (for example, 14.0$\times$ to 19.9$\times$ against 2PL
+with 90\% readers), so the 2026-09 ratios are not reused here.
+
 \subsection{Update throughput and transaction size}
 Figures~\ref{fig:ksweep-u} and~\ref{fig:ksweep-h} vary the transaction size $K$ for insert-only workloads. On
 \emph{uniform} sources (Figure~\ref{fig:ksweep-u}), conflicts are rare and uncontended vertex locks are cheap, so 2PL is
-1.3--2.0$\times$ faster than \sys{} up to $K{=}8$. That gap is the fixed cost of versioning (\S\ref{sec:losses}). As
-$K$ grows, lock and read-set footprints grow with it. At $K{=}32$, \sys{} sustains 141~M effective edges/s while 2PL
-drops to 91~M ($1.55\times$), TL2 to 1.8~M ($77\times$), and the conservative GTX port to 79~M, because its
-chain-granularity rule aborts 45\% of attempts.
+1.8--2.0$\times$ faster than \sys{} up to $K{=}8$. That gap is the fixed cost of the transaction machinery
+(\S\ref{sec:losses}). As $K$ grows, lock and read-set footprints grow with it. At $K{=}32$, \sys{} sustains 224~M
+effective edges/s while 2PL drops to 211~M ($1.06\times$), TL2 to 2.6~M ($85\times$), and the conservative GTX port to
+134~M, because its chain-granularity rule aborts 42\% of attempts.
 
 With a \emph{hub} receiving 50\% of operations (Figure~\ref{fig:ksweep-h}), 2PL does not finish any $K$ within 90~s, and
-TL2 collapses to 0.015--1.0~M edges/s with abort ratios above 99.6\% because every insert conflicts on the hub's degree
-word. \sys{} stays at 74--142~M edges/s. Only the degree-free STM is competitive at small $K$ (0.76--1.21$\times$ of
-\sys{}); at $K{=}32$ it aborts 90\% of attempts and \sys{} is $4.1\times$ faster.
+TL2 collapses to 0.016--3.2~M edges/s with abort ratios above 99.6\% because every insert conflicts on the hub's degree
+word. \sys{} stays at 123--204~M edges/s. Only the degree-free STM is competitive at small $K$: it is faster than \sys{}
+up to $K{=}4$ (\sys{} reaches 0.64--0.74$\times$ of it) and level at $K{=}8$. At $K{=}32$ it aborts 88\% of attempts
+and \sys{} is $3.2\times$ faster.
 
 
 \begin{figure}[t]
@@ -598,12 +655,12 @@ word. \sys{} stays at 74--142~M edges/s. Only the degree-free STM is competitive
     tick label style={font=\scriptsize}, label style={font=\footnotesize},
     legend style={font=\tiny, at={(0.5,1.03)}, anchor=south, legend columns=3, draw=none, fill=none}, ymin=1, ymax=900,
     ytick={1,10,100,1000}, yticklabels={1,10,100,1000}]
-\addplot[cGTX, mark=*] coordinates {(1,181.4)(2,166.7)(4,175.3)(8,164.7)(32,140.9)}; \addlegendentry{\sys{}}
-\addplot[cCONS, mark=o, dashed] coordinates {(1,175.0)(2,164.8)(4,165.7)(8,147.8)(32,78.5)}; \addlegendentry{GTX-conservative}
-\addplot[cTPL, mark=square*] coordinates {(1,343.3)(2,333.8)(4,274.0)(8,215.8)(32,91.0)}; \addlegendentry{2PL}
-\addplot[cSTM, mark=triangle*] coordinates {(1,158.8)(2,124.8)(4,67.8)(8,23.0)(32,1.83)}; \addlegendentry{TL2 STM}
-\addplot[cNOD, mark=diamond*] coordinates {(1,264.6)(2,196.1)(4,179.6)(8,113.5)(32,12.3)}; \addlegendentry{TL2 STM (no degree)}
-\addplot[cCAS, mark=x, densely dotted] coordinates {(1,447.0)(2,500.0)(4,521.1)(8,493.0)(32,477.6)}; \addlegendentry{CAS (non-txn)}
+\addplot[cGTX, mark=*] coordinates {(1,268.6)(2,270.8)(4,259.6)(8,244.1)(32,224.0)}; \addlegendentry{\sys{}}
+\addplot[cCONS, mark=o, dashed] coordinates {(1,267.1)(2,267.7)(4,252.4)(8,223.5)(32,134.5)}; \addlegendentry{GTX-conservative}
+\addplot[cTPL, mark=square*] coordinates {(1,475.6)(2,527.6)(4,519.5)(8,446.2)(32,210.9)}; \addlegendentry{2PL}
+\addplot[cSTM, mark=triangle*] coordinates {(1,275.6)(2,233.1)(4,138.7)(8,53.67)(32,2.646)}; \addlegendentry{TL2 STM}
+\addplot[cNOD, mark=diamond*] coordinates {(1,433.3)(2,418.5)(4,325.9)(8,200.4)(32,27.67)}; \addlegendentry{TL2 STM (no degree)}
+\addplot[cCAS, mark=x, densely dotted] coordinates {(1,575.3)(2,652.6)(4,705.7)(8,687.2)(32,678.1)}; \addlegendentry{CAS (non-txn)}
 \end{axis}
 \end{tikzpicture}
 \caption{Uniform inserts: effective edge insertions per second vs.\ transaction size ($|V|{=}2^{20}$, 4M initial edges,
@@ -621,27 +678,28 @@ word. \sys{} stays at 74--142~M edges/s. Only the degree-free STM is competitive
     tick label style={font=\scriptsize}, label style={font=\footnotesize},
     legend style={font=\tiny, at={(0.5,1.03)}, anchor=south, legend columns=3, draw=none, fill=none}, ymin=0.01, ymax=900,
     ytick={0.01,0.1,1,10,100,1000}, yticklabels={0.01,0.1,1,10,100,1000}]
-\addplot[cGTX, mark=*] coordinates {(1,134.7)(2,141.5)(4,138.8)(8,127.3)(32,73.9)}; \addlegendentry{\sys{}}
-\addplot[cCONS, mark=o, dashed] coordinates {(1,125.5)(2,129.1)(4,123.7)(8,99.5)(32,55.6)}; \addlegendentry{GTX-conservative}
-\addplot[cSTM, mark=triangle*] coordinates {(1,1.029)(2,0.754)(4,0.528)(8,0.2006)(32,0.01524)}; \addlegendentry{TL2 STM}
-\addplot[cNOD, mark=diamond*] coordinates {(1,176.8)(2,144.5)(4,151.2)(8,105.5)(32,18.07)}; \addlegendentry{TL2 STM (no degree)}
-\addplot[cCAS, mark=x, densely dotted] coordinates {(1,297.8)(2,330.1)(4,346.9)(8,332.9)(32,325.9)}; \addlegendentry{CAS (non-txn)}
+\addplot[cGTX, mark=*] coordinates {(1,197.7)(2,204.3)(4,199.9)(8,186.7)(32,123.1)}; \addlegendentry{\sys{}}
+\addplot[cCONS, mark=o, dashed] coordinates {(1,163.1)(2,167.7)(4,163.4)(8,150.1)(32,94.39)}; \addlegendentry{GTX-conservative}
+\addplot[cSTM, mark=triangle*] coordinates {(1,3.161)(2,1.427)(4,0.657)(8,0.2272)(32,0.01593)}; \addlegendentry{TL2 STM}
+\addplot[cNOD, mark=diamond*] coordinates {(1,310.2)(2,310.3)(4,270.8)(8,185.0)(32,38.49)}; \addlegendentry{TL2 STM (no degree)}
+\addplot[cCAS, mark=x, densely dotted] coordinates {(1,375.4)(2,415.4)(4,443.5)(8,428.7)(32,422.6)}; \addlegendentry{CAS (non-txn)}
 \end{axis}
 \end{tikzpicture}
 \caption{50\% hub inserts. 2PL did not finish any $K$ within 90~s (lower-bound speedups of \sys{}:
-$>$11,000$\times$).}
+$>$18,900$\times$).}
 \label{fig:ksweep-h}
 \end{figure}
 
 \subsection{Contention, skew and headline comparison}
 Figure~\ref{fig:headline} summarizes \sys{}'s speedup over each transactional baseline across the scenarios where
 synchronization is hard, together with the uncontended $K{=}1$ case for reference. On power-law churn
-(insert/delete mixes, $K{=}4$), 2PL serializes on hub locks: \sys{} is 525$\times$ faster on R-MAT, and 2PL does
-not finish on Zipf. TL2 is 101--364$\times$ slower. The degree-free STM matches \sys{} (0.89--0.96$\times$) in
-write-only churn. It loses once readers or large transactions appear.
+(insert/delete mixes, $K{=}4$), 2PL serializes on hub locks: \sys{} is 463$\times$ faster on R-MAT, and 2PL does
+not finish on Zipf. TL2 is 96--706$\times$ slower. The degree-free STM beats \sys{} in write-only churn (\sys{} reaches
+0.72--0.73$\times$ of it) and in serializable read-write mixes (0.64--0.75$\times$). It loses once scanning readers or
+large transactions appear.
 
 Under \emph{identical-edge contention} (50\% of operations on 64 or 1,024 hot edges), every system is dominated by
-true conflicts. \sys{} is still 4.6--12.3$\times$ faster than the transactional baselines, because
+true conflicts. \sys{} is still 4.0--9.8$\times$ faster than the transactional baselines, because
 first-updater-wins with no-wait aborts and backoff wastes less work than lock waits or commit-time validation
 failures.
 
@@ -652,7 +710,7 @@ failures.
   width=\textwidth, height=5.6cm, ybar, bar width=5pt, ymode=log, log origin=infty,
   ymin=0.3, ymax=60000, xmin=0.4, xmax=12.6,
   xtick={1,...,12}, xticklabels={
-    {R-MAT\\90\% readers}, {Zipf\\50\% readers}, {SER Zipf\\(checked)}, {SER 50\% hub\\(checked)},
+    {R-MAT\\90\% readers}, {Zipf\\50\% readers}, {SER rw\\Zipf}, {SER rw\\50\% hub},
     {R-MAT churn\\$K{=}4$}, {Zipf churn\\$K{=}4$}, {1,024 hot\\edges}, {64 hot\\edges},
     {uniform ins.\\$K{=}32$}, {50\% hub ins.\\$K{=}32$}, {50\% hub ins.\\$K{=}1$}, {uniform ins.\\$K{=}1$}},
   xticklabel style={align=center, font=\tiny}, tick label style={font=\scriptsize},
@@ -661,47 +719,46 @@ failures.
   legend style={font=\scriptsize, at={(0.5,1.02)}, anchor=south, legend columns=4, draw=none}
 ]
 \addplot[fill=cTPL, draw=none, bar shift=-5.5pt] coordinates {
-  (1,13.96) +- (0,0) (3,652.07) (4,59.47) (5,524.73) (7,9.31) (8,4.57) (9,1.55) (12,0.53)};
+  (1,19.86) (3,2127.53) (5,463.42) (7,3.96) (8,6.18) (9,1.06) (12,0.56)};
 \addlegendentry{vs 2PL}
 \addplot[fill=cSTM, draw=none, bar shift=0pt] coordinates {
-  (1,22.65) (2,8.51) (3,118.55) (4,23.25) (5,101.30) (6,363.90) (7,12.29) (8,2.48) (9,77.15) (10,4711.42) (11,126.83) (12,1.14)};
+  (1,20.60) (2,27.93) (3,419.59) (4,651.58) (5,95.89) (6,705.70) (7,9.83) (8,5.94) (9,84.66) (10,7444.47) (11,60.70) (12,0.97)};
 \addlegendentry{vs TL2 STM}
 \addplot[fill=cNOD, draw=none, bar shift=5.5pt] coordinates {
-  (1,16.69) (2,2.53) (3,20.24) (4,10.16) (5,0.96) (6,0.89) (7,10.25) (8,2.59) (9,11.45) (10,4.09) (11,0.76) (12,0.69)};
+  (1,14.19) (2,7.37) (3,0.64) (4,0.75) (5,0.72) (6,0.73) (7,6.44) (8,5.62) (9,8.09) (10,3.20) (11,0.64) (12,0.62)};
 \addlegendentry{vs TL2 STM (no degree)}
 \addplot[pattern=north east lines, pattern color=cTPL, draw=cTPL, bar shift=-5.5pt] coordinates {
-  (2,205) (6,11903) (10,11373) (11,20690)};
+  (2,616) (4,26903) (6,21863) (10,18934) (11,30381)};
 \addlegendentry{vs 2PL: DNF (lower bound)}
 \draw[black!60, dashed] (axis cs:0.4,1) -- (axis cs:12.6,1);
 \end{axis}
 \end{tikzpicture}
 \caption{Speedup of \sys{} in committed transactions/s over each transactional baseline ($>1$: \sys{} faster). Hatched
 bars: 2PL did not finish within the timeout; the bar is a lower bound that assumes 2PL would have committed everything
-at the timeout. Reader scenarios use each baseline's best scan mode. SER scenarios are the checked configurations
-($|V|{=}2^{16}$).}
+at the timeout. Reader scenarios use each baseline's best scan mode. All scenarios run at full size ($|V|{=}2^{20}$,
+4M initial edges).}
 \label{fig:headline}
 \end{figure*}
 
 \subsection{Concurrent snapshot readers}
 \label{sec:readers}
 Readers are where multi-versioning pays off most. In R-MAT with 90\% read-only transactions (10\% of their operations
-are adjacency scans), \sys{} readers never block writers, never abort and never wait. \sys{} commits 17.3~M
-transactions/s with an overall abort ratio of 0.03\%, compared with 90\% for TL2. Each baseline was run in two modes,
+are adjacency scans), \sys{} readers never block writers, never abort and never wait. \sys{} commits 43.9~M
+transactions/s with an overall abort ratio of 0.02\%, compared with 87\% for TL2. Each baseline was run in two modes,
 per-lane scans and warp-cooperative read-only scans identical in structure to \sys{}'s, and every headline number uses
-the baseline's \emph{better} mode. \sys{} is 14.0$\times$, 22.7$\times$ and 16.7$\times$ faster than 2PL, TL2 and
-degree-free TL2. Figure~\ref{fig:latency} shows read-only tail latency: a p99 of 2.4--2.5~ms for \sys{} versus
-57--459~ms for the transactional baselines. Under Zipf with 50\% readers, 2PL does not finish in either mode, and
-\sys{} is 8.5$\times$ faster than TL2 and 2.5$\times$ faster than degree-free TL2.
-
-Cooperative scanning is required, though. With per-lane scans, \sys{} takes 2,577~ms on Zipf readers, versus 438~ms
-with warp scans, because a scan reads every 32-byte version, including aborted and voided slots.
+the baseline's \emph{better} mode. \sys{} is 19.9$\times$, 20.6$\times$ and 14.2$\times$ faster than 2PL, TL2 and
+degree-free TL2. Figure~\ref{fig:latency} shows read-only tail latency: a p99 of 0.69--0.74~ms for \sys{} versus
+24--122~ms for the transactional baselines. Under Zipf with 50\% readers, 2PL does not finish in either mode, and
+\sys{} is 27.9$\times$ faster than TL2 and 7.4$\times$ faster than degree-free TL2. Cooperative scanning is required:
+in the 2026-09 campaign, per-lane scans made \sys{} 5.9$\times$ slower on Zipf readers, because a scan reads every
+32-byte version, including aborted and voided slots.
 
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
   width=\columnwidth, height=4.9cm, ybar, bar width=7pt, ymode=log, log origin=infty,
-  ymin=1, ymax=1000, symbolic x coords={GTX,2PL,TL2,TL2nd,CAS}, xtick=data,
+  ymin=0.3, ymax=1000, symbolic x coords={GTX,2PL,TL2,TL2nd,CAS}, xtick=data,
   xticklabels={\sys{}, 2PL, TL2 STM, {TL2 STM\\(no deg.)}, {CAS\\(non-txn)}},
   xticklabel style={align=center, font=\tiny}, tick label style={font=\scriptsize},
   ylabel={read-only p99 latency (ms)}, label style={font=\footnotesize},
@@ -709,9 +766,9 @@ with warp scans, because a scan reads every 32-byte version, including aborted a
   legend style={font=\tiny, at={(0.5,1.02)}, anchor=south, legend columns=2, draw=none},
   nodes near coords, nodes near coords style={font=\tiny, rotate=90, anchor=west},
   point meta=explicit symbolic]
-\addplot[fill=cGTX!80, draw=none] coordinates {(GTX,2.42)[2.4] (2PL,458.9)[459] (TL2,209.9)[210] (TL2nd,82.8)[83] (CAS,18.8)[19]};
+\addplot[fill=cGTX!80, draw=none] coordinates {(GTX,0.736)[0.74] (2PL,106.0)[106] (TL2,78.5)[79] (TL2nd,34.1)[34] (CAS,5.80)[5.8]};
 \addlegendentry{per-lane scans}
-\addplot[fill=cCONS, draw=none] coordinates {(GTX,2.49)[2.5] (2PL,57.3)[57] (TL2,328.3)[328] (TL2nd,238.3)[238] (CAS,1.71)[1.7]};
+\addplot[fill=cCONS, draw=none] coordinates {(GTX,0.685)[0.69] (2PL,24.5)[24] (TL2,121.8)[122] (TL2nd,83.0)[83] (CAS,0.632)[0.63]};
 \addlegendentry{cooperative read-only scans}
 \end{axis}
 \end{tikzpicture}
@@ -721,41 +778,86 @@ bars; the modes refer to the baselines.}
 \end{figure}
 
 \subsection{Serializable transactions}
-In SER mode with 20\% read-only transactions and point reads inside update transactions (checked configuration,
-$|V|{=}2^{16}$), \sys{} is 652$\times$, 119$\times$ and 20$\times$ faster than 2PL, TL2 and degree-free TL2 on Zipf,
-and 59$\times$, 23$\times$ and 10$\times$ faster on a 50\% hub. Every system passes C1--C5 on these runs. At full size
-($|V|{=}2^{20}$, read-write $K{=}4$), SER costs \sys{} 10--17\% throughput relative to SI (e.g.\ 46.0~M vs 50.9~M
-transactions/s on uniform). 2PL does not finish on the hub and is 1,471$\times$ slower on Zipf. On uniform
-read-write, SER \sys{} reaches 0.62$\times$ of 2PL and 2.26$\times$ of TL2.
+At full size ($|V|{=}2^{20}$, read-write $K{=}4$ with 20\% read-only transactions), SER \sys{} is 2,128$\times$ and
+420$\times$ faster than 2PL and TL2 on Zipf, and 652$\times$ faster than TL2 on a 50\% hub, where 2PL does not finish.
+The degree-free STM is faster in these write-dominated mixes: \sys{} reaches 0.64$\times$ (Zipf), 0.75$\times$ (hub)
+and 0.80$\times$ (uniform) of it. On uniform read-write, SER \sys{} is 0.49$\times$ of 2PL and 1.61$\times$ of TL2.
+SER costs \sys{} 6--15\% relative to SI. All systems pass C1--C5 in the checked SER runs.
 
-\subsection{Comparison with GPMA+}
-GPMA+ applies a sorted batch as one unit and offers no multi-edge transactions or concurrent readers. We fed it the
-exact $K{=}1$ streams used for \sys{} (Table~\ref{tab:gpma}). \sys{} commits every operation as its own transaction
-and is still 8.6--14.6$\times$ faster than GPMA+ with 524K-edge batches and 10--20$\times$ with 65K-edge batches.
-GPMA+ also loses intra-batch operation order, so on hub and churn streams (duplicates, or insert and delete of one
-edge within a batch) its final state differs from sequential semantics.
+\subsection{Real graphs}
+\label{sec:snap}
+Four SNAP graphs are replayed as sliding-window streams: edges are shuffled with a fixed seed, the first 80\% form
+the initial graph, inserts take unseen tail edges, deletes remove the oldest initial edges, and reads and scans target
+random edges. \sys{} is bulk-loaded with each vertex's first generation sized to its degree; the baselines are pre-sized
+for the initial graph and all future inserts (Table~\ref{tab:snap}).
 
 \begin{table}[t]
-\caption{GPMA+ vs.\ \sys{} on identical $K{=}1$ streams (effective edges/s; GPMA+ Windows port).}
-\label{tab:gpma}
+\caption{SNAP sliding-window streams: speedup of \sys{} (committed transactions/s).}
+\label{tab:snap}
 \footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lrrrr@{}}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}P{2.25cm}P{1.75cm}rrr@{}}
 \toprule
-Stream & \multicolumn{2}{c}{GPMA+ batch} & \sys{} & Speedup \\
- & 65,536 & 524,288 & (txn) & (65K / 524K) \\
+Graph ($|V|$, $|E|$, max deg.) & Stream & 2PL & TL2 & TL2 no-deg \\
 \midrule
-uniform insert & 9.03 M & 12.61 M & 181.4 M & 20.1 / 14.4$\times$ \\
-uniform churn & 15.26 M & 17.98 M & 155.7 M & 10.2 / 8.7$\times$ \\
-R-MAT churn & 15.32 M & 19.04 M & 143.8 M & 9.4 / 7.6$\times$ \\
-50\% hub insert & 8.43 M & 10.45 M & 134.7 M & 16.0 / 12.9$\times$ \\
+wiki-Talk (2.4M, 5.0M, 100K) & ins $K{=}1$ & 34$\times$ & 96$\times$ & 1.01 \\
+ & churn $K{=}4$ & 1,103$\times$ & 395$\times$ & 1.02 \\
+ & SER rw $K{=}4$ & 533$\times$ & 301$\times$ & 1.05 \\
+ & 90\% readers & 196$\times$ & 30$\times$ & 20.6$\times$ \\
+soc-pokec (1.6M, 30.6M, 8.8K) & churn $K{=}4$ & 1.01 & 4.78 & 0.73 \\
+ & 90\% readers & 1.19 & 6.80 & 5.39 \\
+cit-Patents (3.8M, 16.5M, 770) & churn $K{=}4$ & 0.73 & 2.01 & 0.71 \\
+ & 90\% readers & 1.12 & 2.41 & 1.91 \\
+roadNet-CA (2.0M, 5.5M, 12) & churn $K{=}4$ & 0.70 & 1.72 & 0.76 \\
+ & 90\% readers & 0.84 & 1.38 & 1.06 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+wiki-Talk, with a 100K-degree hub, behaves like the synthetic hub cells. Graphs without extreme hubs (roadNet-CA,
+cit-Patents) behave like the uniform cells: \sys{} is 0.66--0.84$\times$ of 2PL on update and SER streams, and it still
+beats TL2 with a degree word except on $K{=}1$ churn. soc-pokec sits between the two and wins as readers grow.
+
+\subsection{Comparison with GPMA+}
+GPMA+ applies a sorted batch as one unit and offers no multi-edge transactions or concurrent readers. We fed it the
+exact $K{=}1$ streams used for \sys{}, and report the faster of the upstream build and our Windows port
+(Table~\ref{tab:gpma}). \sys{} commits every operation as its own transaction. It is 6.6--15.2$\times$ faster on
+streams where GPMA+'s final graph verifies correct, with outliers of 51$\times$ (wiki-Talk inserts) and 296$\times$
+(roadNet-CA inserts, where GPMA+ hits multi-second rebalances). On synthetic hub and churn streams, GPMA+ loses
+intra-batch operation order (a batch can insert and delete the same edge) and its final graph is wrong; there \sys{} is
+5.8--9.5$\times$ faster.
+
+\begin{table}[t]
+\caption{GPMA+ vs.\ \sys{} on identical $K{=}1$ streams (effective edges/s; 65,536-edge batches unless noted).}
+\label{tab:gpma}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrcr@{}}
+\toprule
+Stream & GPMA+ ms & \sys{} ms & GPMA+ verify & Speedup \\
+\midrule
+uniform insert & 44.4 & 3.90 & pass & 11.4$\times$ \\
+uniform insert (524K batch) & 34.8 & 3.90 & pass & 8.9$\times$ \\
+uniform churn & 28.6 & 4.40 & fail & 6.5$\times$ \\
+50\% hub insert & 28.2 & 2.96 & fail & 9.5$\times$ \\
+wiki-Talk insert & 61.4 & 1.19 & pass & 51.5$\times$ \\
+soc-pokec insert / churn & 117.2 / 72.9 & 7.74 / 8.60 & pass & 15.2 / 8.5$\times$ \\
+cit-Patents insert / churn & 101.5 / 60.1 & 8.22 / 9.15 & pass & 12.3 / 6.6$\times$ \\
+roadNet-CA insert / churn & 1,137 / 34.6 & 3.84 / 4.20 & pass & 296 / 8.2$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Batch size.} With one kernel launch per batch (GPMA+'s unit of atomicity, so \sys{} gets no cross-batch
+overlap) on 4M uniform churn operations, \sys{} takes 225~ms at $2^{10}$-edge batches, where launches dominate, and is
+flat at 18--21~ms from $2^{16}$ upwards. GPMA+ amortizes its sort and rebalance only at very large batches. The speedup
+falls from 14--16$\times$ (batches $\le 2^{12}$) to 4.2$\times$ at $2^{20}$ and 1.8$\times$ at $2^{22}$. GPMA+'s final
+state is wrong at every batch size on this stream.
+
 \subsection{Ablation and design hypotheses}
 \label{sec:ablation}
-Each GPU mechanism was stated with a falsification criterion before measurement (Table~\ref{tab:hyp}).
+Each GPU mechanism was stated with a falsification criterion before measurement (Table~\ref{tab:hyp}). The M1 and M3
+measurements are from the 2026-09 campaign.
 
 \textbf{M1: cooperative reservation} (\code{gtx} vs \code{gtx-dst-only}, identical except \code{coop}). The
 hypothesis was a $\ge$10\% gain on hub workloads. Measured gains were +8.6\% and +11.0\% on 50\% hub at $K{=}1$ and
@@ -763,11 +865,11 @@ $K{=}8$, +6.0\% and +5.8\% on 100\% hub, and +3.4\% on uniform $K{=}8$. Three of
 threshold, so M1 is \emph{falsified as a primary mechanism}. Same-address RMWs on Ada's L2 are not the hub bottleneck.
 It is kept as a small win that was never negative.
 
-\textbf{M1b: destination-precise conflicts} (\code{gtx} vs \code{gtx-coop-only} and \code{gtx-cons}). This is
-\emph{supported}. Figure~\ref{fig:aborts} shows the abort ratio: chain-granularity aborts grow with $K$ to 45\%
-(uniform) and 43\% (hub) at $K{=}32$, while destination-precise detection has zero aborts on uniform and 26\% on the
-hub (true conflicts). Throughput improves $\times$1.14 at uniform $K{=}8$ (isolated effect), and $\times$1.80
-(uniform) and $\times$1.33 (hub) at $K{=}32$ over the conservative port.
+\textbf{M1b: destination-precise conflicts} (\code{gtx} vs \code{gtx-cons}). This is \emph{supported}.
+Figure~\ref{fig:aborts} shows the abort ratio: chain-granularity aborts grow with $K$ to 42\% (uniform) and 38\% (hub)
+at $K{=}32$, while destination-precise detection has zero aborts on uniform and 23\% on the hub (true conflicts).
+In the 2026-11 campaign, throughput improves $\times$1.09 at uniform $K{=}8$, and $\times$1.67 (uniform) and
+$\times$1.30 (hub) at $K{=}32$ over the conservative port.
 
 \textbf{M3: epoch commit groups.} \emph{Not falsified.} Commit takes 9.6\% (4M-edge initial graph) to 15.5\% (empty
 graph) of the lane-cycle profile for uniform $K{=}1$ inserts, below the 25\% threshold, and all histories pass.
@@ -785,14 +887,14 @@ relaxed versus acq\_rel reservation RMW (no measurable difference, so the fence 
   xlabel={transaction size $K$}, ylabel={abort ratio (\%)},
   tick label style={font=\scriptsize}, label style={font=\footnotesize},
   legend style={font=\tiny, at={(0.02,0.98)}, anchor=north west, draw=none, fill=white, fill opacity=0.8, text opacity=1}]
-\addplot[cCONS, mark=o, dashed] coordinates {(1,0.16)(2,0.64)(4,2.47)(8,8.54)(32,45.4)}; \addlegendentry{chain-granularity, uniform}
+\addplot[cCONS, mark=o, dashed] coordinates {(1,0.132)(2,0.523)(4,2.03)(8,7.10)(32,41.6)}; \addlegendentry{chain-granularity, uniform}
 \addplot[cGTX, mark=*] coordinates {(1,0)(2,0)(4,0)(8,0)(32,0)}; \addlegendentry{destination-precise, uniform}
-\addplot[cTPL!70, mark=square, dashed] coordinates {(1,0.11)(2,0.46)(4,1.79)(8,6.52)(32,42.5)}; \addlegendentry{chain-granularity, 50\% hub}
-\addplot[cTPL, mark=square*] coordinates {(1,0.05)(2,0.20)(4,0.74)(8,2.73)(32,25.9)}; \addlegendentry{destination-precise, 50\% hub}
+\addplot[cTPL!70, mark=square, dashed] coordinates {(1,0.0901)(2,0.382)(4,1.47)(8,5.37)(32,38.4)}; \addlegendentry{chain-granularity, 50\% hub}
+\addplot[cTPL, mark=square*] coordinates {(1,0.0384)(2,0.156)(4,0.595)(8,2.21)(32,22.6)}; \addlegendentry{destination-precise, 50\% hub}
 \end{axis}
 \end{tikzpicture}
 \caption{Abort ratio under GTX's chain-granularity rule (GTX-conservative) and \sys{}'s destination-precise
-validate-then-CAS (insert-only workloads).}
+validate-then-CAS (insert-only workloads, 2026-11).}
 \label{fig:aborts}
 \end{figure}
 
@@ -809,19 +911,124 @@ M1 cooperative reservation & $<$10\% gain on hub, $K\in\{1,8\}$ & falsified (+3.
 M1b destination-precise conflicts & $<$10\% gain at $K\ge 8$ or any checker failure & supported \\
 M2 multiple reservation regions & $<$10\% gain on 100\% hub & not built (ranked low after M1) \\
 M3 epoch commit groups & commit $>$25\% of cycles, or C1--C5 failure & not falsified (9.6--15.5\%) \\
-M4 reclamation by generation & $>$20\% throughput cost & specified, not built \\
+M4 merging + block reuse & P1 bytes, P2 time, P3 gate + mutations & falsified (P1, P2); P3 fails as registered \\
+M5 quiescent compaction & Q1 bounded, Q2 $\ge$0.85$\times$ e2e, Q3 gate + mutations & Q1 met on uniform and Zipf; fails on identical-edge-1024 (live graph grows) and on R-MAT with the tuned policy (never triggers); Q2 passes (near-empty window; 0.70--0.81$\times$ vs a 3$\times$ arena); Q3 fails as registered ($F{-}1$ not observable) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Where \sys{} loses}
-\label{sec:losses}
-Table~\ref{tab:losses} lists every scenario in which \sys{} is slower. The uncontended gap to 2PL has no single
-hotspot. The engine skeleton alone (about 3.3~ms per 1M operations) takes as long as 2PL's entire run. Closing the gap
-requires fewer bytes per version and cheaper per-attempt bookkeeping.
+\subsection{Memory and version reclamation}
+\label{sec:memory}
+\paragraph{Where the bytes are.} Memory was measured before any redesign (\code{--membreak}). Unwritten capacity in
+each vertex's newest generation, a result of the $8\times$ growth ladder and \code{minCap}${=}8$, is 43--61\% of all
+bytes. Chain heads scale with capacity. Reclaimable garbage (voided, aborted, dead and DEL versions) is only 0\% of the
+bytes on uniform inserts, 4\% on Zipf churn, 9\% on identical-edge-1024 and 14\% on identical-edge-64. Growing
+generations by $2\times$ instead (\code{gtx-gs1}) cuts bytes by 20--55\% at $\le$1\% time on uniform and hot cells. It
+costs 17--30\% on skewed live-insert workloads, because writers then walk more older generations (7$\to$18).
+
+\paragraph{M4: merging, falsified.} Method~4 merges a vertex's generations into one and reuses freed blocks through
+announcements, epoch-based reclamation and forwarding. It is proven (Appendix proof \S8), and gate sections F--H pass.
+Against its registered criteria it is falsified on bytes (P1) and time (P2). On identical-edge-1024 it takes 749$\to$636~MB
+but runs at $0.33\times$ of \sys{}, and \code{gtx-gs1} alone reaches 480~MB at no time cost. Each merge re-copies most
+live versions: 84\% of linked versions are kept. P3 fails as registered, because one of the four registered
+mutations is not observable on this GPU. M4 stays in the code, off by default.
+
+\paragraph{M5: quiescent compaction.} Garbage is a small share of a full store, but it is the only part that grows
+without bound. Every write leaves a version that is never reused, so with a fixed arena any stream eventually runs
+out. Method~5 reclaims at kernel-launch boundaries, where no transaction or snapshot is open. It computes the graph
+visible at the frontier $F$, discards the whole store and rebuilds it as a bulk-loaded state of that graph: one
+generation per live vertex, every edge a committed insert with \code{cts}${=}1$. The proof (Appendix proof \S9,
+Theorem~6) shows that the rebuilt store answers every later snapshot exactly like the old one would have. A trigger
+runs before each launch. It compacts when the arena, head, block or descriptor space could not absorb $1.5\times$ the
+largest per-launch growth seen so far. Large vertices (more than 4096 scanned slots) are split into 512-slot chunks and
+rebuilt one thread block per vertex. This cut the Zipf pause from 27.4 to 10.0~ms.
+
+\paragraph{Protocol.} The criteria were registered before the code was written
+(\code{design/design.md} \S7). \textbf{Q1:} no OOM and no resource aborts over a run that writes $>3\times$ what the
+arena holds, and a high-water over the last third of rounds $\le 1.10\times$ that over the middle third. \textbf{Q2:}
+end-to-end throughput (kernels plus pauses) $\ge 0.85\times$ of \sys{} over the rounds \sys{} completes, on uniform,
+Zipf and identical-edge-1024 churn. \textbf{Q3:} gate section I and three mutations. \textbf{Q4:} report the pauses.
+Each run replays $2^{18}$ transactions per round ($K{=}4$, 50\% insert / 50\% FIFO delete) for 64 rounds on
+$|V|{=}2^{20}$ with 4M initial edges and a 20M-slot arena. The reported policy (trigger, \code{growShift}${=}1$,
+100\% rebuild slack) was chosen \emph{after} registration, from a sweep of seven policies on uniform and Zipf churn
+(\code{results/m5/sweep.log}). The registered default (\code{growShift}${=}3$, no slack) is reported next to it.
 
 \begin{table}[t]
-\caption{Scenarios where \sys{} is slower (\sys{} / baseline throughput).}
+\caption{M5 long runs, 64 rounds, 20M-slot arena (\code{results/m5/longrun.log}). ``Rounds'' is the number of rounds
+completed before the first resource abort. One run per cell. Peak in MiB. Ratio: end-to-end throughput vs \sys{} with a $3\times$ arena (60M) over
+the rounds that run completes (7, 22, 4 and 64 rounds; it also runs out on churn). Pause in ms (p50/max).}
+\label{tab:m5}
+\footnotesize
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Workload, system & Rounds & Peak & Last/mid & Ratio & Pause \\
+\midrule
+\multicolumn{6}{@{}l}{\emph{uniform churn}} \\
+\quad \sys{} / \code{gtx-gs1} & 2 / 6 & 879 / 793 & -- & -- & -- \\
+\quad M5 (policy) & 64 & 748 & 0.999 & 0.79 & 10.2/13.6 \\
+\quad M5 (registered default) & 64 & 641 & 1.001 & 0.49 & 8.0/12.6 \\
+\multicolumn{6}{@{}l}{\emph{Zipf churn}} \\
+\quad \sys{} / \code{gtx-gs1} & 1 / 7 & 979 / 800 & -- & -- & -- \\
+\quad M5 (policy) & 64 & 714 & 1.001 & 0.70 & 10.0/13.2 \\
+\quad M5 (registered default) & 64 & 760 & 1.004 & 0.31 & 8.5/11.5 \\
+\multicolumn{6}{@{}l}{\emph{identical-edge-1024 churn} (live graph grows)} \\
+\quad \sys{} / \code{gtx-gs1} & 1 / 3 & 865 / 805 & -- & -- & -- \\
+\quad M5 (policy) & 28 & 802 & -- & 0.81 & 9.4/16.4 \\
+\quad M5 (policy), 40M arena & 64 & 1352 & 1.107 & -- & 12.6/20.7 \\
+\multicolumn{6}{@{}l}{\emph{R-MAT, 90\% readers}} \\
+\quad \sys{} & 13 & 760 & -- & -- & -- \\
+\quad M5 (policy): never triggers & 64 & 804 & 1.108 & 1.00 & -- \\
+\quad M5 (registered default) & 64 & 723 & 0.994 & 1.36 & 11.1/13.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results (Table~\ref{tab:m5}).}
+\begin{itemize}
+\item \textbf{Q1 is met on uniform and Zipf churn.} \sys{} and \code{gtx-gs1} exhaust the arena in rounds 1--7. M5
+completes all 64 rounds (67M effective writes against a 20M-slot arena). It peaks at 714--748~MiB, and its
+high-water is flat between the middle and the last third of the run.
+\item \textbf{Q1 fails on identical-edge-1024 as registered.} In this stream inserts outnumber effective deletes, so
+the \emph{live} graph grows by about 131K edges per round after round 15 (4.0M$\to$10.3M edges over 64 rounds). The live count is the same, to within tens of edges, under every compaction schedule, so the growth
+comes from the stream and not from a leak. No reclaimer can keep
+that within a fixed arena. M5 runs out at round 28 with 5.7M live edges. With a 40M arena it completes 64 rounds, and
+its memory follows the live graph at about 130 bytes per live edge (last/mid 1.107, just above the 1.10 bound).
+M5 bounds memory by the live graph, not by a constant.
+\item \textbf{Q2 passes as registered, but the window is nearly empty.} \sys{} completes only 1--2 rounds before it
+runs out, and M5 does not need to compact in them (ratio 0.91--1.02). The useful comparison is against \sys{} with a $3\times$ arena, over
+that run's clean rounds (7, 22 and 4). There M5 reaches $0.79\times$ on uniform, $0.70\times$ on Zipf and
+$0.81\times$ on identical-edge-1024 churn. The registered default policy compacts nearly every round and reaches only
+$0.31$--$0.49\times$.
+\item \textbf{Read-heavy streams gain.} On R-MAT with 90\% scanning readers, version chains slow every reader: a
+round of \sys{} grows from 5.5 to 12.2~ms over 64 rounds. The registered default compacts 5 times and holds rounds at
+5.7~ms, $1.36\times$ the end-to-end throughput of the large-arena run. With \code{growShift}${=}1$ the arena never
+fills, so the chosen policy never compacts there, and its high-water keeps rising (last/mid 1.108). The policy is
+workload-dependent.
+\item \textbf{Q3 fails as registered.} Gate section I runs multi-round histories with compaction between rounds in SI and SER and in
+every writer and scan mode. It covers three kernel variants: the default hybrid kernels, the chunked path forced on
+every vertex, and the first warp-per-vertex kernels. Every round is history-checked from the state before
+compaction, and all 110 cases pass. The checker rejects two of the three registered mutations (drop one live edge
+per vertex, keep invalidated versions). The third, compacting at $F{-}1$, is not observable at a launch boundary: the
+last epoch normally holds no committed writer, so visibility at $F{-}1$ equals visibility at $F$ (Appendix proof
+\S9). It is reported as informational. A substitute registered after the fact, a stale frontier $F/2$, is rejected.
+\item \textbf{Q4.} Pauses are 8--12~ms at the median and at most 21~ms, about 2.5~ms per million live edges. A
+compaction is stop-the-world: no transaction runs during it.
+\end{itemize}
+
+\paragraph{Limits.} M5 needs launch boundaries. A single kernel that never returns still grows, and a launch whose
+growth exceeds the margin can still exhaust the arena inside the kernel. It requires M4 to be off. The policy was
+tuned after registration on two of the four workloads.
+
+\subsection{Where \sys{} loses}
+\label{sec:losses}
+Table~\ref{tab:losses} lists every scenario in which \sys{} is slower. The uncontended gap to 2PL is not in the write
+path: removing the entire versioned install (not a valid execution) still leaves \sys{} 16--21\% behind 2PL on
+uniform inserts. The transaction skeleton alone (descriptors, epochs, the attempt loop and the advancer) costs more
+than 2PL's whole run.
+
+\begin{table}[t]
+\caption{Scenarios where \sys{} is slower (\sys{} / baseline throughput, 2026-11).}
 \label{tab:losses}
 \footnotesize
 \setlength{\tabcolsep}{2.5pt}
@@ -829,10 +1036,12 @@ requires fewer bytes per version and cheaper per-attempt bookkeeping.
 \toprule
 Scenario & Ratio & Reason \\
 \midrule
-uniform ins./churn/del., $K\le 8$, vs 2PL & 0.47--0.76 & versioning cost (32 B delta, chain head, descriptor/epoch); uncontended locks are cheap \\
-write-only contention vs TL2 without degree word & 0.64--0.98 & hash-slot writes rarely conflict without a degree word; this STM cannot serve degree queries and collapses with scans \\
-any scenario vs non-txn CAS & 0.10--0.45 & CAS offers no atomicity or snapshots \\
-memory & 2.5--20$\times$ larger & aborted and voided deltas never reclaimed (e.g.\ 1.5 GB vs 77 MB, 64 hot edges) \\
+uniform, small transactions, vs 2PL & 0.37--0.56 & transaction skeleton (descriptors, epochs, attempt loop); uncontended locks are cheap \\
+real graphs without hubs vs 2PL & 0.66--0.84 & same cause (roadNet-CA, cit-Patents) \\
+write-heavy work vs TL2 without degree word & 0.58--0.87 & that STM cannot serve degree queries and is 5.4--20.6$\times$ slower once scanning readers arrive \\
+almost any scenario vs non-txn CAS & 0.07--0.71 & CAS offers no atomicity or snapshots \\
+memory vs pre-sized hash tables & 3--19$\times$ & versions, chain heads and layout (\S\ref{sec:memory}) \\
+long streams with compaction & 0.70--0.81 & stop-the-world compaction pauses (\S\ref{sec:memory}) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -840,25 +1049,27 @@ memory & 2.5--20$\times$ larger & aborted and voided deltas never reclaimed (e.g
 \subsection{Threats to validity}
 The baselines' hash tables are pre-sized and never grow, which favours them. Scans were compared in both per-lane
 and cooperative modes, and the better mode of each baseline is reported. DNF lower bounds assume the baseline would
-have finished at the timeout. Literature numbers (TITAN~V, P100, 2080~Ti, other datasets) are used only as reference
-points and never as head-to-head claims. All experiments use synthetic generators on one laptop GPU under WDDM. Real
-SNAP graphs and batch-size sweeps are future work.
+have finished at the timeout. The 1.4--2.7$\times$ timing shift between campaigns was not isolated. The proof is a
+hand proof, and one M4 hazard is covered by the proof only. The \code{gtx-m4} performance rows predate the
+truncated-merge fix, which the gate covers. faimGraph was not run: a driver on identical streams exists, but
+building the third-party code was not permitted, and Hornet, SlabGraph and LPMA are Linux-only or unavailable. The M5
+compaction policy was chosen after a sweep run once the criteria had been registered (\S\ref{sec:memory}). All
+experiments use one laptop GPU under WDDM.
 
 %% ===================================================================================================================
 \section{Limitations and Future Work}
 \label{sec:limits}
 \begin{enumerate}
-\item \textbf{Reclamation and consolidation by generation (M4).} A generation becomes reclaimable when it is sealed for
-all chains, every delta in it is superseded at an epoch $\le$ \code{minActiveRts} (or aborted or voided), and no
-reader with $rts <$ its retire epoch is active. Protection is tracked per generation rather than per delta. Live
-latest versions are consolidated into a fresh generation under the same sealing protocol, and backpressure on long
-scans and arena watermarks bounds memory. This is the main remaining gap: it removes the memory overhead and
-shortens scans.
-\item \textbf{Closing the uncontended gap}: split hot and cold delta fields, and make per-attempt bookkeeping cheaper.
-\item \textbf{Broader comparisons}: real graphs, batch-size sweeps from $2^{10}$ to $2^{22}$, and local builds of LPMA,
-Hornet, faimGraph and SlabGraph.
-\item \textbf{Out of scope}: vertex insertion and deletion, descriptor reuse (needs generation-tagged ids), multiple
-reservation regions (M2), and durability.
+\item \textbf{Reclamation inside a kernel.} M5 bounds memory only for workloads that return to the host between
+launches. A single kernel that never returns still grows until the arena is exhausted, and a round that grows by more
+than the projected margin can exhaust the arena before the next boundary. Online reclamation needs announcement-based
+protection as in M4, but without M4's re-copying cost.
+\item \textbf{Compaction pauses.} Compaction is stop-the-world. Overlapping it with a running kernel, or compacting
+only the vertices that changed, would remove most of the pause.
+\item \textbf{The memory floor}: smaller versions (split hot and cold delta fields) and fewer chain heads.
+\item \textbf{The uncontended gap}: cheaper per-attempt bookkeeping; the write path is not the cause.
+\item \textbf{Broader comparisons}: faimGraph (driver written, not built), Hornet, SlabGraph and LPMA on a Linux host.
+\item \textbf{Out of scope}: vertex insertion and deletion, durability, and multiple reservation regions (M2).
 \end{enumerate}
 
 %% ===================================================================================================================
@@ -869,9 +1080,12 @@ conflict detection must validate and install on the same observed head, blocks m
 copying, commit registration must be a single wait-free RMW, and serializable validation must follow the epoch. The
 result offers multi-edge transactions and non-blocking snapshot readers, which no existing GPU dynamic-graph structure
 provides. It outperforms lock-based and word-STM synchronization by one to four orders of magnitude where
-synchronization is hard, and it pays a bounded, measured cost where it is easy. A history checker that validates every
-operation was essential. It found five protocol defects that a final-state comparison would have missed, and we
-consider it a necessary part of any claim about GPU transaction protocols.
+synchronization is hard, and it pays a bounded, measured cost where it is easy. Memory, the main gap of the first
+version, is bounded by quiescent compaction for workloads that reach kernel boundaries and whose live graph fits
+the arena, at a measured throughput cost.
+A history checker that validates every operation, together with a paper proof, was essential: between them they found
+eight protocol defects, two of which no test could observe. We consider both a necessary part of any claim about GPU
+transaction protocols.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{refs}
@@ -880,12 +1094,15 @@ consider it a necessary part of any claim about GPU transaction protocols.
 \section{Reproducing the Results}
 All code, raw data and scripts are in the \code{gtx-gpu-research} repository.
 \begin{itemize}
-\item Correctness gate: \code{build.bat test\_gtx \&\& bin\textbackslash test\_gtx.exe full}.
-\item Benchmarks: \code{build.bat bench}; \code{python scripts/run\_matrix.py main|ser|ablation|fair|fairro|gpmamatch|check};
-\code{python scripts/summarize.py} (medians, bootstrap CIs, \code{results/summary.md}, \code{results/speedups.csv}).
+\item Correctness gate (sections A--I): \code{build.bat test\_gtx \&\& bin\textbackslash test\_gtx.exe full}.
+\item Benchmarks: \code{build.bat bench}; \code{python scripts/campaign\_v2.py}; tables by
+\code{python scripts/report\_tables\_v2.py} (\code{results/v2/}).
+\item Long runs and compaction: \code{python scripts/sweep\_m5.py}, \code{python scripts/longrun\_m5.py}
+(\code{results/m5/}).
 \item GPMA+: \code{baselines/gpma/build\_gpma.bat}; \code{python scripts/run\_gpma.py}.
-\item Source map: \code{src/gtxg.cuh} (engine), \code{src/baselines.cuh} (2PL, TL2, CAS), \code{src/checker.hpp}
-(C1--C5), \code{src/workload.hpp} (generator), \code{src/bench.cu}, \code{src/test\_gtx.cu}.
+\item Source map: \code{src/gtxg.cuh} (engine, M4, M5), \code{src/baselines.cuh} (2PL, TL2, CAS),
+\code{src/checker.hpp} (C1--C5), \code{src/harness.hpp} (runs, long runs), \code{src/workload.hpp} (generator),
+\code{src/bench.cu}, \code{src/test\_gtx.cu}; proof in \code{design/proof.md}.
 \end{itemize}
 
 \end{document}

@@ -1,0 +1,298 @@
+== A. randomized adversarial histories (expect PASS) ==
+mixed-uniform-V256         coop=0 dst=0 ser=0 cscan=0 mut=0 | commits=20000 aborts=24982 giveup=0 eff=37882 noop=17972 casfail=1037 grow=343 void=50004 | DSGcyc=334910 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=0 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=21473 giveup=0 eff=37987 noop=17867 casfail=1840 grow=418 void=46052 | DSGcyc=335094 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=1 dst=0 ser=0 cscan=1 mut=0 | commits=20000 aborts=24550 giveup=0 eff=37853 noop=18001 casfail=1382 grow=346 void=49485 | DSGcyc=321382 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=21473 giveup=0 eff=38256 noop=17598 casfail=1357 grow=418 void=45601 | DSGcyc=341782 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=0 dst=0 ser=1 cscan=1 mut=0 | commits=20000 aborts=97249 giveup=0 eff=37121 noop=18733 casfail=1432 grow=600 void=98614 | DSGcyc=0 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=0 dst=1 ser=1 cscan=0 mut=0 | commits=20000 aborts=105187 giveup=0 eff=37256 noop=18598 casfail=1357 grow=674 void=98912 | DSGcyc=0 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=1 dst=0 ser=1 cscan=0 mut=0 | commits=20000 aborts=104604 giveup=0 eff=37312 noop=18542 casfail=1028 grow=601 void=99931 | DSGcyc=0 | checker=PASS [as expected] 
+mixed-uniform-V256         coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=20000 aborts=94529 giveup=0 eff=37423 noop=18431 casfail=1911 grow=674 void=95482 | DSGcyc=0 | checker=PASS [as expected] 
+hub50-mixed                coop=0 dst=0 ser=0 cscan=0 mut=0 | commits=19999 aborts=160872 giveup=1 eff=39890 noop=24120 casfail=278 grow=1883 void=245052 | DSGcyc=4459760 | checker=PASS [as expected] 
+hub50-mixed                coop=0 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=64295 giveup=0 eff=39746 noop=24267 casfail=441 grow=1783 void=108561 | DSGcyc=4388742 | checker=PASS [as expected] 
+hub50-mixed                coop=1 dst=0 ser=0 cscan=1 mut=0 | commits=20000 aborts=68232 giveup=0 eff=39759 noop=24254 casfail=399 grow=1813 void=113275 | DSGcyc=4495929 | checker=PASS [as expected] 
+hub50-mixed                coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=139142 giveup=0 eff=39979 noop=24034 casfail=374 grow=1866 void=216170 | DSGcyc=4422394 | checker=PASS [as expected] 
+hub50-mixed                coop=0 dst=0 ser=1 cscan=1 mut=0 | commits=17809 aborts=252276 giveup=2191 eff=34659 noop=23424 casfail=405 grow=2270 void=275876 | DSGcyc=0 | checker=PASS [as expected] 
+hub50-mixed                coop=0 dst=1 ser=1 cscan=0 mut=0 | commits=17088 aborts=187651 giveup=2912 eff=33409 noop=23055 casfail=272 grow=2265 void=214079 | DSGcyc=0 | checker=PASS [as expected] 
+hub50-mixed                coop=1 dst=0 ser=1 cscan=0 mut=0 | commits=17110 aborts=189409 giveup=2890 eff=33335 noop=23181 casfail=197 grow=2268 void=216366 | DSGcyc=0 | checker=PASS [as expected] 
+hub50-mixed                coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=17840 aborts=251994 giveup=2160 eff=34754 noop=23411 casfail=468 grow=2278 void=273163 | DSGcyc=0 | checker=PASS [as expected] 
+identical-edge-8           coop=0 dst=0 ser=0 cscan=0 mut=0 | commits=12406 aborts=289236 giveup=7594 eff=7381 noop=17431 casfail=41583 grow=1278 void=343721 | DSGcyc=64 | checker=PASS [as expected] 
+identical-edge-8           coop=0 dst=1 ser=0 cscan=1 mut=0 | commits=12257 aborts=286654 giveup=7743 eff=7299 noop=17215 casfail=40805 grow=1290 void=340659 | DSGcyc=45 | checker=PASS [as expected] 
+identical-edge-8           coop=1 dst=0 ser=0 cscan=1 mut=0 | commits=12232 aborts=287363 giveup=7768 eff=7234 noop=17230 casfail=40134 grow=1283 void=341084 | DSGcyc=57 | checker=PASS [as expected] 
+identical-edge-8           coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=12075 aborts=289333 giveup=7925 eff=7335 noop=16815 casfail=39155 grow=1279 void=342110 | DSGcyc=48 | checker=PASS [as expected] 
+identical-edge-8           coop=0 dst=0 ser=1 cscan=1 mut=0 | commits=9741 aborts=328845 giveup=10259 eff=5812 noop=13670 casfail=41141 grow=1371 void=374860 | DSGcyc=0 | checker=PASS [as expected] 
+identical-edge-8           coop=0 dst=1 ser=1 cscan=0 mut=0 | commits=9695 aborts=332071 giveup=10305 eff=5895 noop=13495 casfail=40353 grow=1390 void=378835 | DSGcyc=0 | checker=PASS [as expected] 
+identical-edge-8           coop=1 dst=0 ser=1 cscan=0 mut=0 | commits=9764 aborts=329015 giveup=10236 eff=5834 noop=13694 casfail=38978 grow=1379 void=374259 | DSGcyc=0 | checker=PASS [as expected] 
+identical-edge-8           coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=9780 aborts=333177 giveup=10220 eff=5883 noop=13677 casfail=39518 grow=1368 void=378176 | DSGcyc=0 | checker=PASS [as expected] 
+churn-V64-K8               coop=0 dst=0 ser=0 cscan=0 mut=0 | commits=10000 aborts=76226 giveup=0 eff=36176 noop=35774 casfail=1807 grow=168 void=175843 | DSGcyc=323933 | checker=PASS [as expected] 
+churn-V64-K8               coop=0 dst=1 ser=0 cscan=1 mut=0 | commits=10000 aborts=69327 giveup=0 eff=35826 noop=36124 casfail=4765 grow=172 void=165791 | DSGcyc=302334 | checker=PASS [as expected] 
+churn-V64-K8               coop=1 dst=0 ser=0 cscan=1 mut=0 | commits=10000 aborts=70264 giveup=0 eff=36054 noop=35896 casfail=4428 grow=158 void=167085 | DSGcyc=303227 | checker=PASS [as expected] 
+churn-V64-K8               coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=10000 aborts=74150 giveup=0 eff=36267 noop=35683 casfail=2110 grow=175 void=171897 | DSGcyc=328047 | checker=PASS [as expected] 
+churn-V64-K8               coop=0 dst=0 ser=1 cscan=1 mut=0 | commits=3620 aborts=106873 giveup=6380 eff=14064 noop=13053 casfail=5522 grow=192 void=211605 | DSGcyc=0 | checker=PASS [as expected] 
+churn-V64-K8               coop=0 dst=1 ser=1 cscan=0 mut=0 | commits=3611 aborts=127869 giveup=6389 eff=13759 noop=13352 casfail=2383 grow=208 void=237661 | DSGcyc=0 | checker=PASS [as expected] 
+churn-V64-K8               coop=1 dst=0 ser=1 cscan=0 mut=0 | commits=3573 aborts=127016 giveup=6427 eff=13685 noop=13130 casfail=2041 grow=193 void=239281 | DSGcyc=0 | checker=PASS [as expected] 
+churn-V64-K8               coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=3826 aborts=105485 giveup=6174 eff=14926 noop=13745 casfail=5775 grow=208 void=210612 | DSGcyc=0 | checker=PASS [as expected] 
+zipf-readers50             coop=0 dst=0 ser=0 cscan=0 mut=0 | commits=20000 aborts=19021 giveup=0 eff=24935 noop=7113 casfail=35 grow=1443 void=31386 | DSGcyc=1523171 | checker=PASS [as expected] 
+zipf-readers50             coop=0 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=8678 giveup=0 eff=25037 noop=7011 casfail=134 grow=1348 void=17798 | DSGcyc=1501447 | checker=PASS [as expected] 
+zipf-readers50             coop=1 dst=0 ser=0 cscan=1 mut=0 | commits=20000 aborts=13391 giveup=0 eff=24898 noop=7150 casfail=140 grow=1413 void=23588 | DSGcyc=1494383 | checker=PASS [as expected] 
+zipf-readers50             coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=22777 giveup=0 eff=25122 noop=6926 casfail=62 grow=1408 void=35695 | DSGcyc=1437248 | checker=PASS [as expected] 
+zipf-readers50             coop=0 dst=0 ser=1 cscan=1 mut=0 | commits=18597 aborts=390973 giveup=1403 eff=22003 noop=6410 casfail=528 grow=2412 void=246246 | DSGcyc=0 | checker=PASS [as expected] 
+zipf-readers50             coop=0 dst=1 ser=1 cscan=0 mut=0 | commits=18518 aborts=321741 giveup=1482 eff=22045 noop=6193 casfail=102 grow=2402 void=198944 | DSGcyc=0 | checker=PASS [as expected] 
+zipf-readers50             coop=1 dst=0 ser=1 cscan=0 mut=0 | commits=18517 aborts=326476 giveup=1483 eff=21859 noop=6373 casfail=82 grow=2388 void=209435 | DSGcyc=0 | checker=PASS [as expected] 
+zipf-readers50             coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=18581 aborts=419475 giveup=1419 eff=22128 noop=6242 casfail=740 grow=2436 void=253880 | DSGcyc=0 | checker=PASS [as expected] 
+hub30-K32                  coop=0 dst=0 ser=0 cscan=0 mut=0 | commits=29187 aborts=217876 giveup=813 eff=599908 noop=240166 casfail=8091 grow=12660 void=1010268 | DSGcyc=32 | checker=PASS [as expected] 
+hub30-K32                  coop=0 dst=1 ser=0 cscan=1 mut=0 | commits=28731 aborts=216042 giveup=1269 eff=590224 noop=236636 casfail=9232 grow=12660 void=1009357 | DSGcyc=33 | checker=PASS [as expected] 
+hub30-K32                  coop=1 dst=0 ser=0 cscan=1 mut=0 | commits=28965 aborts=218405 giveup=1035 eff=595291 noop=238393 casfail=7967 grow=12660 void=1011341 | DSGcyc=22 | checker=PASS [as expected] 
+hub30-K32                  coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=28912 aborts=213819 giveup=1088 eff=594130 noop=237943 casfail=8954 grow=12660 void=1005238 | DSGcyc=44 | checker=PASS [as expected] 
+hub30-K32                  coop=0 dst=0 ser=1 cscan=1 mut=0 | commits=17390 aborts=251281 giveup=12610 eff=359779 noop=140694 casfail=9825 grow=12660 void=1079517 | DSGcyc=0 | checker=PASS [as expected] 
+hub30-K32                  coop=0 dst=1 ser=1 cscan=0 mut=0 | commits=17199 aborts=246868 giveup=12801 eff=355930 noop=138900 casfail=10392 grow=12660 void=1075264 | DSGcyc=0 | checker=PASS [as expected] 
+hub30-K32                  coop=1 dst=0 ser=1 cscan=0 mut=0 | commits=17364 aborts=251569 giveup=12636 eff=358822 noop=140720 casfail=9406 grow=12660 void=1083245 | DSGcyc=0 | checker=PASS [as expected] 
+hub30-K32                  coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=17214 aborts=246997 giveup=12786 eff=356264 noop=139017 casfail=10246 grow=12660 void=1074045 | DSGcyc=0 | checker=PASS [as expected] 
+== B. write-skew probe ==
+write-skew SI              coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=32000 aborts=0 giveup=0 eff=32000 noop=0 casfail=1676 grow=4000 void=0 | DSGcyc=16000 | checker=PASS [as expected] 
+   SI anomaly witnessed: YES (DSG back edges=16000)
+write-skew SER             coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=32000 aborts=60872 giveup=0 eff=32000 noop=0 casfail=2203 grow=8000 void=3 | DSGcyc=0 | checker=PASS [as expected] 
+== C. mutation tests (expect FAIL: checker must catch the broken protocol) ==
+mut1-no-ww-check           coop=1 dst=1 ser=0 cscan=1 mut=1 | commits=20000 aborts=0 giveup=0 eff=20058 noop=19942 casfail=2175198 grow=1020 void=22251 | DSGcyc=7079 | checker=FAIL [as expected] C3 two writers of one key share a commit timestamp
+   mut1 violations: C1-read=1759 C1-scan=0 C2-obs=8165 C3-ww=4278 C3-sameEpoch=10448 C4-finalMissing=0 C4-finalExtra=10007 C5-backEdges=7079 | prototype log-vs-final: missing=0 extra=0
+mut2-dirty-reads           coop=1 dst=1 ser=0 cscan=1 mut=2 | commits=20000 aborts=8404 giveup=0 eff=38790 noop=17064 casfail=1772 grow=418 void=28396 | DSGcyc=300083 | checker=FAIL [as expected] C1 txn 11 op 1 type 2 (0,98): got 0 expected 1 (rts=25 cts=25)
+   mut2 violations: C1-read=10627 C1-scan=7155 C2-obs=13928 C3-ww=607 C3-sameEpoch=14 C4-finalMissing=1870 C4-finalExtra=387 C5-backEdges=300083 | prototype log-vs-final: missing=966 extra=317
+mut3-ignore-snapshot       coop=1 dst=1 ser=0 cscan=1 mut=3 | commits=20000 aborts=14002 giveup=0 eff=38141 noop=17713 casfail=1686 grow=418 void=36106 | DSGcyc=309124 | checker=FAIL [as expected] C1 scan txn 46 vertex 64: got 27/dfd55830 expected 13/e70585f0
+   mut3 violations: C1-read=9629 C1-scan=5790 C2-obs=10690 C3-ww=140 C3-sameEpoch=0 C4-finalMissing=1997 C4-finalExtra=197 C5-backEdges=309124 | prototype log-vs-final: missing=0 extra=0
+== D. resource exhaustion (tiny arena; expect PASS on committed prefix) ==
+tiny-arena                 coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=0 aborts=22133 giveup=20000 eff=0 noop=0 casfail=2940 grow=515 void=5506 | DSGcyc=0 | checker=PASS [as expected] 
+   resource aborts=20000 giveups=20000 commits=0 flag=1
+   arena=20000 commits=0 resource=20000 flag=1 grow=515 checker=PASS
+   arena=40000 commits=101 resource=19899 flag=1 grow=554 checker=PASS
+   arena=200000 commits=17597 resource=2403 flag=1 grow=780 checker=PASS
+== E. optimistic pre-walk (expect PASS) ==
+mixed-uniform-V256+prewalk coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=20850 giveup=0 eff=37393 noop=18461 casfail=1410 grow=418 void=2797 | DSGcyc=336250 | checker=PASS [as expected] 
+mixed-uniform-V256+prewalk coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=20000 aborts=92088 giveup=0 eff=37255 noop=18599 casfail=1997 grow=634 void=2452 | DSGcyc=0 | checker=PASS [as expected] 
+hub50-mixed+prewalk        coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=72007 giveup=0 eff=39009 noop=25004 casfail=264 grow=1464 void=5681 | DSGcyc=4273857 | checker=PASS [as expected] 
+hub50-mixed+prewalk        coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=17506 aborts=709725 giveup=2494 eff=33794 noop=23645 casfail=2279 grow=2400 void=4110 | DSGcyc=0 | checker=PASS [as expected] 
+identical-edge-8+prewalk   coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=256764 giveup=0 eff=9142 noop=30858 casfail=20432 grow=1222 void=63768 | DSGcyc=173 | checker=PASS [as expected] 
+identical-edge-8+prewalk   coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=20000 aborts=374464 giveup=0 eff=8932 noop=31068 casfail=29571 grow=1384 void=77856 | DSGcyc=0 | checker=PASS [as expected] 
+churn-V64-K8+prewalk       coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=10000 aborts=72110 giveup=0 eff=36025 noop=35925 casfail=2365 grow=172 void=7090 | DSGcyc=322594 | checker=PASS [as expected] 
+churn-V64-K8+prewalk       coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=7581 aborts=563094 giveup=2419 eff=27556 noop=28582 casfail=31205 grow=208 void=51544 | DSGcyc=0 | checker=PASS [as expected] 
+zipf-readers50+prewalk     coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=20000 aborts=9704 giveup=0 eff=24722 noop=7326 casfail=41 grow=1248 void=978 | DSGcyc=1426104 | checker=PASS [as expected] 
+zipf-readers50+prewalk     coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=19141 aborts=421164 giveup=859 eff=23114 noop=6681 casfail=616 grow=2578 void=990 | DSGcyc=0 | checker=PASS [as expected] 
+hub30-K32+prewalk          coop=1 dst=1 ser=0 cscan=0 mut=0 | commits=30000 aborts=215272 giveup=0 eff=616357 noop=247611 casfail=6911 grow=12342 void=10359 | DSGcyc=33 | checker=PASS [as expected] 
+hub30-K32+prewalk          coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=22342 aborts=272734 giveup=7658 eff=461869 noop=180995 casfail=7881 grow=12660 void=12395 | DSGcyc=0 | checker=PASS [as expected] 
+== F. Method 4 merging + reuse (expect PASS; merges must occur) ==
+mixed-uniform-V256+m4merge coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=21486 giveup=0 eff=38105 noop=17749 casfail=3455 grow=1537 void=46210 | DSGcyc=325916 | checker=PASS [as expected] 
+   M4 droppedDelObs=439 merges=690 gensMerged=1807 kept=34105/51281 linked retired=0 freed=0 reused=0 holds=675 lockBusy=2 ringFull=0 overflow=0
+mixed-uniform-V256+m4reuse coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=22375 giveup=0 eff=38079 noop=17775 casfail=3160 grow=1622 void=47099 | DSGcyc=326439 | checker=PASS [as expected] 
+   M4 droppedDelObs=99 merges=784 gensMerged=1983 kept=47261/61389 linked retired=1983 freed=1979 reused=0 holds=795 lockBusy=49 ringFull=0 overflow=0
+mixed-uniform-V256+m4merge coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=20000 aborts=89564 giveup=0 eff=37372 noop=18482 casfail=4158 grow=3460 void=92094 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=4868 merges=2675 gensMerged=5717 kept=125185/246022 linked retired=0 freed=0 reused=0 holds=2663 lockBusy=0 ringFull=0 overflow=0
+mixed-uniform-V256+m4reuse coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=20000 aborts=89751 giveup=0 eff=37371 noop=18483 casfail=3667 grow=3522 void=91792 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=2315 merges=2747 gensMerged=5851 kept=166339/284954 linked retired=5851 freed=5413 reused=1268 holds=2734 lockBusy=10 ringFull=0 overflow=0
+hub50-mixed+m4merge        coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=65480 giveup=0 eff=39766 noop=24247 casfail=763 grow=5760 void=109978 | DSGcyc=4347199 | checker=PASS [as expected] 
+   M4 droppedDelObs=1014 merges=3339 gensMerged=6785 kept=40001/90968 linked retired=0 freed=0 reused=0 holds=4615 lockBusy=23 ringFull=0 overflow=0
+hub50-mixed+m4reuse        coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=61886 giveup=0 eff=39677 noop=24336 casfail=767 grow=5662 void=104865 | DSGcyc=4369427 | checker=PASS [as expected] 
+   M4 droppedDelObs=1071 merges=3251 gensMerged=6595 kept=37818/83187 linked retired=6595 freed=6595 reused=3459 holds=4513 lockBusy=20 ringFull=0 overflow=0
+hub50-mixed+m4merge        coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=17288 aborts=164127 giveup=2712 eff=33724 noop=23056 casfail=842 grow=13611 void=201390 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=2846 merges=11222 gensMerged=22523 kept=113421/260576 linked retired=0 freed=0 reused=0 holds=12940 lockBusy=27 ringFull=0 overflow=0
+hub50-mixed+m4reuse        coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=17103 aborts=1674369 giveup=2897 eff=33222 noop=23287 casfail=5481 grow=177312 void=1345108 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=2599 merges=174934 gensMerged=349940 kept=2594645/5298421 linked retired=349940 freed=349940 reused=345716 holds=176324 lockBusy=28 ringFull=0 overflow=0
+identical-edge-8+m4merge   coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=490307 giveup=0 eff=11661 noop=28339 casfail=66639 grow=5671 void=591096 | DSGcyc=115 | checker=PASS [as expected] 
+   M4 droppedDelObs=32 merges=3771 gensMerged=7830 kept=17686/52537 linked retired=0 freed=0 reused=0 holds=5032 lockBusy=250 ringFull=0 overflow=0
+identical-edge-8+m4reuse   coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=489724 giveup=0 eff=11568 noop=28432 casfail=67444 grow=5646 void=590704 | DSGcyc=107 | checker=PASS [as expected] 
+   M4 droppedDelObs=17 merges=3560 gensMerged=7585 kept=33515/65948 linked retired=7585 freed=7534 reused=2871 holds=5008 lockBusy=438 ringFull=0 overflow=0
+identical-edge-8+m4merge   coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=11421 aborts=437288 giveup=8579 eff=5925 noop=16917 casfail=54087 grow=7894 void=498412 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=14 merges=5757 gensMerged=11776 kept=17072/63913 linked retired=0 freed=0 reused=0 holds=7384 lockBusy=232 ringFull=0 overflow=0
+identical-edge-8+m4reuse   coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=20000 aborts=697124 giveup=0 eff=10631 noop=29369 casfail=93860 grow=11112 void=813227 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=9 merges=8579 gensMerged=17774 kept=58503/140022 linked retired=17774 freed=17459 reused=7125 holds=10476 lockBusy=593 ringFull=0 overflow=0
+churn-V64-K8+m4merge       coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=5710 aborts=67444 giveup=4290 eff=20182 noop=20290 casfail=6087 grow=1377 void=138085 | DSGcyc=168608 | checker=PASS [as expected] 
+   M4 droppedDelObs=4897 merges=1099 gensMerged=2360 kept=29462/90952 linked retired=0 freed=0 reused=0 holds=1162 lockBusy=12 ringFull=0 overflow=0
+churn-V64-K8+m4reuse       coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=8355 aborts=69599 giveup=1645 eff=29892 noop=29928 casfail=5544 grow=1941 void=157434 | DSGcyc=240756 | checker=PASS [as expected] 
+   M4 droppedDelObs=820 merges=1369 gensMerged=3165 kept=121306/195639 linked retired=3165 freed=2633 reused=834 holds=1716 lockBusy=321 ringFull=0 overflow=0
+churn-V64-K8+m4merge       coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=1304 aborts=74429 giveup=8696 eff=5313 noop=4485 casfail=6226 grow=1374 void=127764 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=869 merges=1102 gensMerged=2356 kept=20157/74840 linked retired=0 freed=0 reused=0 holds=1179 lockBusy=10 ringFull=0 overflow=0
+churn-V64-K8+m4reuse       coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=2187 aborts=82053 giveup=7813 eff=8774 noop=7649 casfail=5873 grow=1818 void=150563 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=346 merges=1490 gensMerged=3196 kept=62590/131198 linked retired=3196 freed=1478 reused=832 holds=1616 lockBusy=80 ringFull=0 overflow=0
+zipf-readers50+m4merge     coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=8520 giveup=0 eff=25051 noop=6997 casfail=339 grow=1684 void=17533 | DSGcyc=1464385 | checker=PASS [as expected] 
+   M4 droppedDelObs=0 merges=89 gensMerged=267 kept=13751/16013 linked retired=0 freed=0 reused=0 holds=389 lockBusy=4 ringFull=0 overflow=0
+zipf-readers50+m4reuse     coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=20000 aborts=9368 giveup=0 eff=25045 noop=7003 casfail=398 grow=1748 void=18633 | DSGcyc=1497174 | checker=PASS [as expected] 
+   M4 droppedDelObs=2 merges=112 gensMerged=314 kept=15845/18821 linked retired=314 freed=310 reused=6 holds=456 lockBusy=4 ringFull=0 overflow=0
+zipf-readers50+m4merge     coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=18547 aborts=238608 giveup=1453 eff=22027 noop=6225 casfail=1427 grow=18428 void=149267 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=372 merges=14986 gensMerged=30111 kept=440682/864070 linked retired=0 freed=0 reused=0 holds=17548 lockBusy=7 ringFull=0 overflow=0
+zipf-readers50+m4reuse     coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=18500 aborts=1671575 giveup=1500 eff=21974 noop=6238 casfail=7343 grow=126032 void=987140 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=338 merges=118172 gensMerged=236486 kept=3446276/6686144 linked retired=236486 freed=236486 reused=235846 holds=124781 lockBusy=7 ringFull=0 overflow=0
+hub30-K32+m4merge          coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=6408 aborts=128988 giveup=23592 eff=128794 noop=54418 casfail=11412 grow=61084 void=379893 | DSGcyc=4 | checker=PASS [as expected] 
+   M4 droppedDelObs=120 merges=42947 gensMerged=86779 kept=374975/819240 linked retired=0 freed=0 reused=0 holds=55770 lockBusy=37 ringFull=0 overflow=0
+hub30-K32+m4reuse          coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=6722 aborts=136433 giveup=23278 eff=135399 noop=57155 casfail=8489 grow=65941 void=404800 | DSGcyc=8 | checker=PASS [as expected] 
+   M4 droppedDelObs=14 merges=47795 gensMerged=96682 kept=474302/980779 linked retired=96682 freed=70423 reused=10219 holds=60468 lockBusy=327 ringFull=0 overflow=0
+hub30-K32+m4merge          coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=3428 aborts=133559 giveup=26572 eff=70316 noop=28290 casfail=12377 grow=63054 void=371448 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=24 merges=43337 gensMerged=86958 kept=210536/689694 linked retired=0 freed=0 reused=0 holds=58834 lockBusy=36 ringFull=0 overflow=0
+hub30-K32+m4reuse          coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=4063 aborts=140436 giveup=25937 eff=82755 noop=34055 casfail=9035 grow=67676 void=397481 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=0 merges=48042 gensMerged=96576 kept=295856/862173 linked retired=96576 freed=52650 reused=9868 holds=63030 lockBusy=226 ringFull=0 overflow=0
+m4-hub-scan-race+m4merge   coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=24465 aborts=95509 giveup=5535 eff=24495 noop=18007 casfail=750 grow=3800 void=132596 | DSGcyc=4236831 | checker=PASS [as expected] 
+   M4 droppedDelObs=2690 merges=3119 gensMerged=6394 kept=63640/111717 linked retired=0 freed=0 reused=0 holds=3484 lockBusy=97 ringFull=0 overflow=0
+m4-hub-scan-race+m4reuse   coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=30000 aborts=105328 giveup=0 eff=33293 noop=25527 casfail=882 grow=4239 void=160182 | DSGcyc=5626234 | checker=PASS [as expected] 
+   M4 droppedDelObs=3995 merges=3548 gensMerged=7267 kept=78599/142820 linked retired=7267 freed=7267 reused=5383 holds=3829 lockBusy=123 ringFull=0 overflow=0
+m4-hub-scan-race+m4merge   coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=12135 aborts=101480 giveup=17865 eff=3287 noop=5086 casfail=1005 grow=3782 void=101750 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=969 merges=3145 gensMerged=6394 kept=24679/70189 linked retired=0 freed=0 reused=0 holds=3644 lockBusy=57 ringFull=0 overflow=0
+m4-hub-scan-race+m4reuse   coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=24796 aborts=1988983 giveup=5204 eff=19081 noop=26737 casfail=24977 grow=118826 void=1771828 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=8029 merges=117872 gensMerged=236170 kept=3029453/5575990 linked retired=236170 freed=236170 reused=233775 holds=118429 lockBusy=375 ringFull=0 overflow=0
+m4-hot-churn-scan+m4merge  coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=8228 aborts=125577 giveup=21772 eff=2282 noop=3326 casfail=8062 grow=1421 void=130129 | DSGcyc=6604 | checker=PASS [as expected] 
+   M4 droppedDelObs=272 merges=1075 gensMerged=2355 kept=15266/32850 linked retired=0 freed=0 reused=0 holds=1306 lockBusy=158 ringFull=0 overflow=0
+m4-hot-churn-scan+m4reuse  coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=10037 aborts=205934 giveup=19963 eff=4178 noop=6328 casfail=18194 grow=2382 void=236519 | DSGcyc=7436 | checker=PASS [as expected] 
+   M4 droppedDelObs=356 merges=1696 gensMerged=3935 kept=38873/72022 linked retired=3935 freed=3935 reused=1582 holds=2233 lockBusy=368 ringFull=0 overflow=0
+m4-hot-churn-scan+m4merge  coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=7140 aborts=118413 giveup=22860 eff=512 noop=2033 casfail=9662 grow=1372 void=119230 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=883 merges=1124 gensMerged=2363 kept=8417/26647 linked retired=0 freed=0 reused=0 holds=1255 lockBusy=61 ringFull=0 overflow=0
+m4-hot-churn-scan+m4reuse  coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=8156 aborts=201782 giveup=21844 eff=1373 noop=3751 casfail=22459 grow=2285 void=226908 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=182 merges=1963 gensMerged=4128 kept=21611/58593 linked retired=4128 freed=4128 reused=1752 holds=2143 lockBusy=130 ringFull=0 overflow=0
+churn-V64-K8+m4trunc       coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=6944 aborts=68263 giveup=3056 eff=24782 noop=24692 casfail=5869 grow=1785 void=146674 | DSGcyc=202650 | checker=PASS [as expected] 
+   M4 droppedDelObs=0 merges=1463 gensMerged=2926 kept=100215/153990 linked retired=2926 freed=2600 reused=765 holds=1565 lockBusy=67 ringFull=0 overflow=0
+   truncated merges=1507
+churn-V64-K8+m4trunc       coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=1999 aborts=80805 giveup=8001 eff=7982 noop=7045 casfail=6325 grow=1770 void=145843 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=36 merges=1526 gensMerged=3052 kept=50527/115692 linked retired=3052 freed=1550 reused=803 holds=1571 lockBusy=11 ringFull=0 overflow=0
+   truncated merges=1497
+m4-hub-scan-race+m4trunc   coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=30000 aborts=105510 giveup=0 eff=33402 noop=25418 casfail=1105 grow=4288 void=159865 | DSGcyc=5615006 | checker=PASS [as expected] 
+   M4 droppedDelObs=3037 merges=3570 gensMerged=7140 kept=100321/147628 linked retired=7140 freed=7140 reused=5340 holds=3868 lockBusy=133 ringFull=0 overflow=0
+   truncated merges=750
+m4-hub-scan-race+m4trunc   coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=24735 aborts=1989105 giveup=5265 eff=18963 noop=26715 casfail=6594 grow=115920 void=1775953 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=2122 merges=115277 gensMerged=230554 kept=4903826/7377030 linked retired=230554 freed=230554 reused=228483 holds=115522 lockBusy=61 ringFull=0 overflow=0
+   truncated merges=12129
+m4-hot-churn-scan+m4trunc  coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=9110 aborts=176464 giveup=20890 eff=3139 noop=4698 casfail=14120 grow=2032 void=195300 | DSGcyc=5398 | checker=PASS [as expected] 
+   M4 droppedDelObs=183 merges=1773 gensMerged=3546 kept=27802/54801 linked retired=3546 freed=3498 reused=1304 holds=1901 lockBusy=96 ringFull=0 overflow=0
+   truncated merges=699
+m4-hot-churn-scan+m4trunc  coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=7899 aborts=180264 giveup=22101 eff=1096 noop=3300 casfail=18104 grow=2129 void=198937 | DSGcyc=0 | checker=PASS [as expected] 
+   M4 droppedDelObs=23 merges=1911 gensMerged=3822 kept=15546/48028 linked retired=3822 freed=3536 reused=1513 holds=1989 lockBusy=39 ringFull=0 overflow=0
+   truncated merges=803
+== G. Method 4 mutations (expect FAIL) ==
+m4mut-its-no-handoff       coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=9751 aborts=193847 giveup=20249 eff=3864 noop=5843 casfail=17580 grow=2267 void=221338 | DSGcyc=6925 | checker=FAIL [as expected] C1 scan txn 15653 vertex 28: got 12/d08399ea expected 11/0190b86b
+   M4 droppedDelObs=278 merges=1713 gensMerged=3839 kept=39984/71230 linked retired=3839 freed=3839 reused=1484 holds=2116 lockBusy=315 ringFull=0 overflow=0
+   violations: C1-read=12 C1-scan=3437 C2-obs=12 C3-ww=0 C3-sameEpoch=0 C4-missing=0 C4-extra=42 C5-backEdges=6925
+m4mut-drop-at-frontier     coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=30000 aborts=103472 giveup=0 eff=33185 noop=25635 casfail=1034 grow=4236 void=157831 | DSGcyc=5657021 | checker=FAIL [as expected] C1 scan txn 112 vertex 0: got 229/0eff888c expected 236/65f82f48
+   M4 droppedDelObs=5794 merges=3533 gensMerged=7249 kept=63002/127106 linked retired=7249 freed=7249 reused=5412 holds=3824 lockBusy=117 ringFull=0 overflow=0
+   violations: C1-read=216 C1-scan=8498 C2-obs=245 C3-ww=0 C3-sameEpoch=0 C4-missing=0 C4-extra=0 C5-backEdges=5657021
+m4mut-drop-at-frontier-SER coop=1 dst=1 ser=1 cscan=1 mut=0 | commits=24757 aborts=1989061 giveup=5243 eff=18931 noop=26797 casfail=25990 grow=118531 void=1764823 | DSGcyc=719 | checker=FAIL [as expected] C1 scan txn 1786 vertex 0: got 228/8586bfc6 expected 236/65f82f48
+   M4 droppedDelObs=11083 merges=117436 gensMerged=235440 kept=3016057/5549735 linked retired=235440 freed=235440 reused=232854 holds=118134 lockBusy=512 ringFull=0 overflow=0
+   violations: C1-read=16 C1-scan=699 C2-obs=18 C3-ww=0 C3-sameEpoch=0 C4-missing=0 C4-extra=0 C5-backEdges=719
+m4mut-perlane-genlist      (informational, SIMT-lockstep hazard) checker=PASS (not observable here)
+   M4 droppedDelObs=4006 merges=3590 gensMerged=7360 kept=80552/145223 linked retired=7360 freed=7360 reused=5093 holds=3881 lockBusy=122 ringFull=0 overflow=0
+   violations: C1-read=0 C1-scan=0 C2-obs=0 C3-ww=0 C3-sameEpoch=0 C4-missing=0 C4-extra=0 C5-backEdges=5645157
+m4mut-trunc-drop-dels      coop=1 dst=1 ser=0 cscan=1 mut=0 | commits=9240 aborts=179464 giveup=20760 eff=3319 noop=4952 casfail=13897 grow=2085 void=199631 | DSGcyc=6007 | checker=FAIL [as expected] C1 scan txn 16262 vertex 35: got 16/bc5caa05 expected 15/2e00f10c
+   M4 droppedDelObs=181 merges=1801 gensMerged=3602 kept=28422/55892 linked retired=3602 freed=3578 reused=1384 holds=1945 lockBusy=112 ringFull=0 overflow=0
+   violations: C1-read=36 C1-scan=3156 C2-obs=42 C3-ww=0 C3-sameEpoch=0 C4-missing=0 C4-extra=19 C5-backEdges=6007
+== H. resource exhaustion with M4 reuse (expect PASS; compare commits with section D) ==
+   m4 arena=20000 commits=3 resource=19997 flag=1 grow=515 checker=PASS
+   M4 droppedDelObs=0 merges=0 gensMerged=0 kept=0/0 linked retired=0 freed=0 reused=0 holds=0 lockBusy=0 ringFull=0 overflow=0
+   m4 arena=40000 commits=122 resource=19878 flag=1 grow=554 checker=PASS
+   M4 droppedDelObs=0 merges=0 gensMerged=0 kept=0/0 linked retired=0 freed=0 reused=0 holds=0 lockBusy=0 ringFull=0 overflow=0
+   m4 arena=200000 commits=19643 resource=357 flag=1 grow=864 checker=PASS
+   M4 droppedDelObs=0 merges=88 gensMerged=176 kept=945/4418 linked retired=176 freed=162 reused=7 holds=135 lockBusy=0 ringFull=0 overflow=0
+== I. M5 quiescent compaction over multi-round streams (expect PASS; mutations expect FAIL) ==
+qc-mixed-uniform-V256      hyb    coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=0 dst=1 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=1 dst=0 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=0 dst=1 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=1 dst=0 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      hyb    coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=0 dst=0 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=0 dst=1 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=1 dst=0 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=1 dst=1 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=0 dst=0 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=0 dst=1 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=1 dst=0 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      chunk  coop=1 dst=1 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      legacy coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      legacy coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      legacy coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-mixed-uniform-V256      legacy coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=0 dst=1 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=1 dst=0 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=0 dst=1 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=1 dst=0 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-hub50-mixed             hyb    coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=0 dst=0 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=0 dst=1 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=1 dst=0 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=1 dst=1 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=0 dst=0 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=0 dst=1 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=1 dst=0 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-hub50-mixed             chunk  coop=1 dst=1 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-hub50-mixed             legacy coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             legacy coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-hub50-mixed             legacy coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-hub50-mixed             legacy coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=0 dst=1 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=1 dst=0 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=0 dst=1 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=1 dst=0 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        hyb    coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=0 dst=0 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=0 dst=1 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=1 dst=0 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=1 dst=1 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=0 dst=0 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=0 dst=1 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=1 dst=0 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        chunk  coop=1 dst=1 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        legacy coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        legacy coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        legacy coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-identical-edge-8        legacy coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=0 dst=1 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=1 dst=0 ser=0 cscan=1 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=0 dst=1 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=1 dst=0 ser=1 cscan=0 gs=3 slack=50 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-zipf-readers50          hyb    coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=0 dst=0 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=0 dst=1 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=1 dst=0 ser=0 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=1 dst=1 ser=0 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=0 dst=0 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=0 dst=1 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=1 dst=0 ser=1 cscan=0 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-zipf-readers50          chunk  coop=1 dst=1 ser=1 cscan=1 gs=1 slack=100 | compactions=5 checkedRounds=6 flags=6 | checker=PASS [as expected] 
+qc-zipf-readers50          legacy coop=0 dst=0 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          legacy coop=1 dst=1 ser=0 cscan=0 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=0 | checker=PASS [as expected] 
+qc-zipf-readers50          legacy coop=0 dst=0 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-zipf-readers50          legacy coop=1 dst=1 ser=1 cscan=1 gs=3 slack=0 | compactions=5 checkedRounds=6 flags=7 | checker=PASS [as expected] 
+qc-trigger-small-arena     hyb    ser=0 arena=400000 | compactions=1 checkedRounds=6 | checker=PASS [as expected] 
+qc-trigger-small-arena     hyb    ser=1 arena=400000 | compactions=2 checkedRounds=6 | checker=PASS [as expected] 
+qc-trigger-small-arena     chunk  ser=0 arena=120000 | compactions=1 checkedRounds=6 | checker=PASS [as expected] 
+qc-trigger-small-arena     chunk  ser=1 arena=120000 | compactions=2 checkedRounds=6 | checker=PASS [as expected] 
+qc-trigger-small-arena     legacy ser=0 arena=400000 | compactions=1 checkedRounds=6 | checker=PASS [as expected] 
+qc-trigger-small-arena     legacy ser=1 arena=400000 | compactions=2 checkedRounds=6 | checker=PASS [as expected] 
+qcmut-drop-live-edge       hyb    ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 2275 vertex 122: got 14/4779d778 expected 15/2801c4ec
+qcmut-drop-live-edge       hyb    ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 2275 vertex 122: got 13/55187b85 expected 14/aac22983
+qcmut-drop-live-edge       chunk  ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 2275 vertex 122: got 13/6cea26db expected 14/933074dd
+qcmut-drop-live-edge       chunk  ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 2275 vertex 122: got 12/deeb4406 expected 13/b20a3cf4
+qcmut-drop-live-edge       legacy ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 2275 vertex 122: got 16/31d4811f expected 17/11e21696
+qcmut-drop-live-edge       legacy ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 2275 vertex 122: got 12/57ae0f59 expected 13/a22a5526
+qcmut-keep-invalidated     hyb    ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 275 vertex 67: got 42/8328eb1c expected 17/4e7f02a6
+qcmut-keep-invalidated     hyb    ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 275 vertex 67: got 42/8328eb1c expected 15/8190fbb6
+qcmut-keep-invalidated     chunk  ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 275 vertex 67: got 42/8328eb1c expected 19/dca2fa8f
+qcmut-keep-invalidated     chunk  ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 txn 5 op 3 type 3 (196,10): got 1 expected 0 (rts=1 cts=1)
+qcmut-keep-invalidated     legacy ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 txn 5 op 3 type 3 (196,10): got 1 expected 0 (rts=1 cts=1)
+qcmut-keep-invalidated     legacy ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 275 vertex 67: got 42/8328eb1c expected 15/8190fbb6
+qcmut-stale-frontier-F/2   hyb    ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 txn 117 op 0 type 2 (37,82): got 0 expected 1 (rts=1 cts=1)
+qcmut-stale-frontier-F/2   hyb    ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 264 vertex 239: got 12/71e9cc71 expected 13/8204a4fe
+qcmut-stale-frontier-F/2   chunk  ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 txn 5 op 3 type 3 (196,10): got 1 expected 0 (rts=1 cts=1)
+qcmut-stale-frontier-F/2   chunk  ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 scan txn 499 vertex 133: got 19/40872204 expected 19/bbf72d8f
+qcmut-stale-frontier-F/2   legacy ser=0 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 txn 7 op 0 type 2 (28,227): got 0 expected 1 (rts=1 cts=1)
+qcmut-stale-frontier-F/2   legacy ser=1 | compactions=5 | checker=FAIL [as expected] round 1: compaction changed the visible graph; history checker: C1 txn 493 op 3 type 2 (132,24): got 0 expected 1 (rts=1 cts=1)
+qcmut-compact-at-F-1       hyb    ser=0 | compactions=5 | checker=PASS [informational] 
+qcmut-compact-at-F-1       hyb    ser=1 | compactions=5 | checker=PASS [informational] 
+qcmut-compact-at-F-1       chunk  ser=0 | compactions=5 | checker=PASS [informational] 
+qcmut-compact-at-F-1       chunk  ser=1 | compactions=5 | checker=PASS [informational] 
+qcmut-compact-at-F-1       legacy ser=0 | compactions=5 | checker=PASS [informational] 
+qcmut-compact-at-F-1       legacy ser=1 | compactions=5 | checker=PASS [informational] 
+
+RESULT: ALL AS EXPECTED (0 unexpected)

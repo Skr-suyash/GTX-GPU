@@ -65,8 +65,22 @@ source distribution; destinations uniform in [0,V), no self loops.
 3. **Matched transactional performance** — `run_matrix.py main` (sync baselines on shared storage), `ser`.
 4. **Ablations** — `run_matrix.py ablation`: cooperative allocation (M1) and destination-precise conflicts,
    each alone and combined, at hub fractions 0 / 0.5 / 1.0 and K ∈ {1, 8}.
-5. Next (specified, not yet run): multiple reservation regions (M2), reclamation by generation (M4), real SNAP graphs,
-   batch-size sweep 2^10..2^22 against GPMA+.
+5. **2026-11 additions, all run by `scripts/campaign_v2.py` into `results/v2/`:**
+   - **Method 4.** Merging + reuse, with pass criteria pre-registered in `design/design.md` §7 M4. Gate sections F–H
+     (`results/v2/correctness_suite.txt`).
+   - **Layout sweep.** `scripts/layout_sweep.py` → `results/v2/layout_sweep.csv`.
+   - **Real SNAP graphs.** roadNet-CA, wiki-Talk, cit-Patents and soc-pokec, as sliding-window streams
+     (`workload.hpp makeFileWorkload`; 80% initial, inserts from the remaining tail, deletes of the oldest initial
+     edges). GTX-GPU uses the degree-sized bulk loader here, because soc-pokec needs 82M slots through the 8×
+     ladder (> 60M arena) against 36M bulk. Baselines are pre-sized from all inserts as before.
+   - **Batch-size sweep.** 2^10 … 2^22 on a 4M-op uniform churn stream. GTX-GPU runs one kernel launch per batch with
+     the frontier published between launches; GPMA+ uses identical batches.
+   - **Not done.** M2 (ranked low, unchanged). faimGraph: driver written, build not permitted in that session (see
+     `baselines/faimgraph/PORT_NOTES.md`). Hornet, SlabGraph and LPMA: Linux-only or unavailable, paper-only.
+6. **Environment note (2026-11).** The NVIDIA driver is now 621.01, and MSVC is VS 2022 Build Tools 14.44. Every
+   kernel ran 1.4–2.7× faster than in the 2026-09 runs. The untouched 2026-09 source rebuilt with the new compiler
+   times identically (`bin/bench_sept.exe` vs the 2026-09 binary: 3.928 vs 3.935 ms), so the compiler is not the
+   cause. The cause was not isolated further. Never mix 2026-09 and 2026-11 numbers in one ratio.
 
 ## 7. Known threats to validity
 * Baselines' hash tables are **pre-sized** from the workload (never grow); GTX-GPU grows blocks at run time.

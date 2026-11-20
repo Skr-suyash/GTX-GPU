@@ -27,7 +27,8 @@ struct CheckReport {
   bool ok = true;
   long long committed = 0, readMismatch = 0, obsMismatch = 0, wwViolations = 0, sameEpochWW = 0,
             scanMismatch = 0, dsgEdges = 0, cycleTxns = 0, finalMissing = 0, finalExtra = 0,
-            logFinalMissing = 0, logFinalExtra = 0;  // prototype-style log-vs-final check (informational)
+            logFinalMissing = 0, logFinalExtra = 0,  // prototype-style log-vs-final check (informational)
+            droppedDelObs = 0;                       // M4: absent observations whose DEL a merge dropped (accepted)
   std::string first;
   // forensic data for the first scan mismatch
   long long badScanTxn = -1; u32 badScanU = 0, badScanOp = 0;
@@ -42,6 +43,13 @@ struct CheckInput {
   std::vector<std::pair<u32, u32>> initial;              // graph before the run
   // obs delta index -> writer: -1 none, -2 initial/loader, >=0 txn index of this run, -3 invalid
   std::function<long long(u32)> obsWriter;
+  // If set, used instead of obsWriter with the op index (M4: the observed version's writer recorded at read time,
+  // because a reclaimed slot may hold a different version in the final snapshot).
+  std::function<long long(u32)> obsWriterOp;
+  // M4 may drop a committed DEL at <= minActive (proof L11): a reader then observes "no version" (absent) where the
+  // model's newest version is that DEL. Only that case is accepted; any other identity mismatch still fails C2, and a
+  // reader that skips to a stale INS or misses a newer version changes the result and fails C1.
+  bool allowDroppedDel = false;
   bool checkObs = false;
   bool ser = false;
   bool haveFinal = false;
@@ -110,8 +118,10 @@ inline CheckReport checkHistory(const CheckInput& in) {
         }
         if (!isOwn && in.checkObs) {
           long long expW = vi >= 0 ? vers[k][vi].txn : -1;
-          long long gotW = in.obsWriter(rr.obs);
-          if (gotW != expW) {
+          long long gotW = in.obsWriterOp ? in.obsWriterOp(j) : in.obsWriter(rr.obs);
+          bool droppedDel = in.allowDroppedDel && gotW == -1 && vi >= 0 && !vers[k][vi].present;
+          if (droppedDel) rep.droppedDelObs++;
+          if (gotW != expW && !droppedDel) {
             rep.obsMismatch++;
             snprintf(buf, sizeof buf, "C2 txn %u (%u,%u): observed writer %lld expected %lld", t, op.u, op.v, gotW, expW);
             rep.fail(buf);

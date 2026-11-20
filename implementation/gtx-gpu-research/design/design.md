@@ -193,11 +193,97 @@ generation under the same reservation/sealing protocol. *Backpressure:* if `minA
 than a bound, new long scans are delayed and writers that would allocate beyond an arena watermark abort with
 `AB_RESOURCE`. *Hypothesis:* per-generation protection needs O(#generations) metadata instead of O(#deltas).
 *Falsified if* reclamation of churn workloads costs > 20% throughput or any snapshot read changes result.
-*Status:* specified, not implemented; the current prototype never reclaims (memory grows with aborted attempts —
-visible in the `tiny-arena` test and in SER hub stress runs).
+
+**Measurement before design (2026-11-10, `results/v2/layout_sweep.csv`, `--membreak`).** The memory overhead is mostly
+*layout*, not garbage:
+- **Unwritten capacity** — the tail of each vertex's newest generation, caused by the 8× growth ladder and
+  `minCap = 8` — is 43–61% of all bytes.
+- **Chain heads** scale with capacity.
+- **Reclaimable garbage** (voided + aborted + dead + DEL) is 0% (uniform inserts), 4% (Zipf churn), 9%
+  (identical-edge-1024) and 14% (identical-edge-64).
+- **Fully dead old generations** exist only in the hot cells, at 6–17% of bytes.
+
+The growth factor is the main lever:
+- `growShift = 1` cuts memory 20–55% for ≤ 1% time on uniform and hot cells.
+- It costs 18–23% on hub and R-MAT cells, because every write walks every older generation (7 → 18 generations).
+
+**Implemented M4 (`Cfg::m4`).**
+- **1: announce + reclaimer warp.** Per-attempt announcement; a dedicated warp publishes a lower bound `minAct` on all
+  snapshots.
+- **3: + garbage-triggered generation merging.**
+  - Each block counts its estimated garbage: voided slots, aborted linked deltas, and 2 per committed delete.
+  - When a garbage-heavy generation (garbage ≥ cap/2) fills, its successor keeps the **same size** (hold-sizing) instead
+    of growing 8×.
+  - If ≥ 2 older generations with ≥ `mergeMin` slots lie below it, the grower's warp merges them into one generation,
+    copying only what a snapshot ≥ `minAct` can still need (keep predicate, proof L11).
+  - It then swings `prevGen` once (release).
+  - Mostly-live vertices are never merged: re-copying a live hub would cost O(degree) per growth.
+- **7: + block reuse.** Retired generations go through a retire ring tagged with `frontier` (RMW read after the swing).
+  The reclaimer zeroes them and pushes them onto per-size-class tagged free lists once `minAct` passes their retire
+  epoch (EBR, proof L14). `allocBlock` and merges pop from the free lists.
+
+Versions moved by a merge forward their invalidation word (FWD bit) to the copy, so concurrent deleters are never
+lost (L12). The proof is in `design/proof.md` §8.
+
+**Pass criteria (written before the M4 performance runs):**
+- **P1 memory.** On identical-edge-64 and identical-edge-1024, `gtx-m4` uses ≥ 40% fewer bytes than `gtx` (default
+  layout), and no more than the `gs1-mc8` layout fallback.
+- **P2 cost.** On every main-matrix and SER scenario, `gtx-m4` throughput is ≥ 0.80× `gtx`, measured in the same session.
+- **P3 correctness.** Every gate section passes (A–H), and all four M4 mutations are rejected.
+  *Outcome (2026-11-10):* fails as registered, 3 of 4 rejected; `dbg 128` is not observable (see `results/v2/m4_diagnosis.md`).
+- **P4 SER aborts.** The SER abort ratio with M4 is reported next to M4-off. Spurious aborts from dropped DELs are
+  expected to be rare.
+
+If P1 or P2 fails, M4 is reported as falsified for that criterion. The thresholds are not moved.
+
+### M5 Bounded memory by quiescent compaction (registered 2026-11-14, before any M5 measurement)
+
+**Problem.** With M4 off (the default), every version, block, chain head and descriptor is bump-allocated and never
+freed. Under a continuous update stream, the store therefore exhausts its arena after a finite number of writes, even
+if the live graph stays the same size. M4 does not fix this: it does not reuse descriptors, and its reclaimer lags.
+A system that eventually runs out of memory is not usable for a long-running workload. M5 is a new method, not an M4
+revision; M4 stays falsified.
+
+**Mechanism.** GPU applications already run in kernel launches. Between two launches the store is quiescent: no
+attempt is active, and `publishAll()` has published every commit, so the frontier F covers every committed version.
+At such a point M5 may compact:
+1. A device kernel counts, per vertex, the INS versions visible at F (the scan rule of `visibleEdges`).
+2. A prefix sum sizes one generation per vertex at pow2ceil(live + 1 + slack), as the bulk loader does.
+3. The kernel gathers the live destinations into a temporary array of 4 bytes per live edge.
+4. The store is reset. Every counter restarts: versions, blocks, heads, descriptors, txids and epochs.
+5. The kernel rebuilds the vertices from the gathered edges. Each version is a committed INS by the loader txid
+   (`cts = 1`).
+
+The trigger runs before each launch. M5 compacts when the arena, head or block space, or descriptor space could not
+absorb the largest per-launch growth seen so far, with a 1.5× margin. So a launch never starts without room for it,
+unless the live graph itself no longer fits.
+
+**Scope.** M5 bounds memory only for a workload that reaches launch boundaries. A single never-ending kernel still
+grows. No snapshot spans a compaction, because none can be open at a launch boundary. Requires `m4 = 0`.
+
+**Pass criteria (thresholds fixed now, not to be moved):**
+- **Q1 bounded memory.** Over a long run whose total writes exceed 3× what the arena could hold without compaction,
+  `gtx-qc` completes with no OOM flag and no resource aborts. Its high-water bytes over the last third of the rounds
+  are ≤ 1.10× the high-water over the middle third. `gtx` and `gtx-gs1` with the same arena are expected to exhaust it;
+  their failure round is reported.
+- **Q2 cost.** End-to-end throughput of `gtx-qc` (kernels plus compaction pauses), over the rounds that `gtx` completes
+  without OOM, is ≥ 0.85× that of `gtx` on uniform churn, Zipf churn and identical-edge-1024 churn.
+- **Q3 correctness.**
+  - A new gate section I runs multi-round histories with compaction between rounds, in SI and SER and in each
+    writer/scan mode, and history-checks every round from the state at the start of that round (before compaction).
+  - Three mutations must be rejected: drop one live edge per vertex; keep invalidated versions; compact at F − 1.
+  - The full gate A–I passes.
+- **Q4 pauses.** Pause time per compaction and per million live edges is reported, with the p50 and max over the run.
+
+If Q1 or Q2 fails, M5 is reported as falsified for that criterion.
 
 ## 8. What is claimed, and what is not
 * Claimed only with local, matched measurements on the same workload streams and seeds (`results/`).
 * Literature numbers are reference points, never head-to-head claims (different GPUs, datasets, guarantees).
-* The prototype does not implement vertex insertion/deletion, reclamation (M4), multiple regions (M2), durability,
-  or descriptor reuse (descriptors are fresh per attempt; reuse would require generation-tagged ids).
+* The prototype does not implement:
+  - vertex insertion or deletion;
+  - multiple reservation regions (M2);
+  - durability;
+  - descriptor reuse. Descriptors are fresh per attempt (8 B each); reuse would require generation-tagged ids.
+* M4 reclaims delta blocks and chain heads, but **not** block records or descriptors.
+* Correctness is argued in `design/proof.md`. That is a hand proof against the PTX memory model, not machine-checked.

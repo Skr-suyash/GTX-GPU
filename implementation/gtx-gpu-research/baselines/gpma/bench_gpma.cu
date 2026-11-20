@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
   p.pIns = AD("pins", 1); p.pDel = AD("pdel", 0); p.src = A("src", "uniform"); p.hubFrac = AD("hub", 0);
   p.zipfS = AD("zipf", 1.0); p.hotEdges = (u32)AD("hot", 0); p.hotFrac = AD("hotfrac", 0);
   p.initEdges = (u32)AD("init", 0); p.seed = (u64)AD("seed", 1);
+  p.graph = A("graph", ""); p.initFrac = AD("initfrac", 0.8);
   u32 batch = (u32)AD("batch", 65536);
   int reps = (int)AD("reps", 5);
   std::string label = A("label", "run");
@@ -53,7 +54,7 @@ int main(int argc, char** argv) {
 
   for (int rep = -1; rep < reps; rep++) {
     GPMA gpma;
-    init_csr_gpma(gpma, p.V);
+    init_csr_gpma(gpma, w.V);
     cudaDeviceSynchronize();
     if (!w.initEdges.empty()) {
       thrust::host_vector<KEY_TYPE> ik(w.initEdges.size()); thrust::host_vector<VALUE_TYPE> iv(w.initEdges.size(), 1);

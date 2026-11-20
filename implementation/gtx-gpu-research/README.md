@@ -19,7 +19,28 @@ Hardware: RTX 4060 Laptop GPU (sm_89), CUDA 12.8, Windows 11.
 | `src/test_gtx.cu` | correctness suite (adversarial histories, write-skew probe, mutation tests, exhaustion) |
 | `src/bench.cu`, `scripts/run_matrix.py`, `scripts/summarize.py` | benchmark driver, resumable sweep, statistics |
 | `baselines/gpma/` | GPMA+ harness on identical streams; Windows port vs pristine upstream (CDP1); `PORT_NOTES.md` |
-| `results/` | raw CSV, summaries, speedups with bootstrap CIs, defect log |
+| `results/` | 2026-09 campaign: raw CSV, summaries, speedups with bootstrap CIs, defect log |
+| `results/v2/` | **2026-11 campaign (current numbers):** same matrix re-measured with the final binary, plus Method 4, the 2× layout row, SNAP graphs, batch-size sweep vs GPMA+, layout sweep, uncontended-gap bound, correctness suite A–H |
+| `design/proof.md` | paper proof of SI and serializability (L1–L10, Theorems 1–5) and of Method 4 (L11–L14), each lemma mapped to code and tests |
+| `scripts/campaign_v2.py` | runs the whole 2026-11 measurement campaign in order (correctness first) |
+| `scripts/snap2bin.py`, `data/snap/` | SNAP edge lists → binary edge caches (`--src file --graph ...`, sliding-window streams) |
+| `baselines/faimgraph/` | faimGraph driver + build script on identical streams (**not built**: see its `PORT_NOTES.md`; clone `github.com/GPUPeople/faimGraph` at `d54a72e` into `upstream/` to build) |
+| `endsem_report/` | **end-semester report** (`GTX-GPU_EndSem_Report_Group8_IIITA.pdf`, LaTeX source `main.tex`) |
+| `midterm_report/` | mid-term report (PDF + LaTeX source) |
+| `paper/` | technical report and presenter guide; `paper/sept2026/` = the September snapshot |
+| `../../ppt/RM Presentation EndSem.{pptx,pdf}` | end-semester slides |
 
-Quick start: `build.bat test_gtx && bin\test_gtx.exe full` (correctness gate), then
-`build.bat bench && python scripts\run_matrix.py main && python scripts\summarize.py`.
+Not in the repository: `data/snap/` (SNAP graphs, ~680 MB; download from snap.stanford.edu and convert with
+`scripts/snap2bin.py`), `bin/` (build output) and `endsem_report/fonts/` (the report uses Consolas and Nirmala UI;
+copy them from `C:\Windows\Fonts` into `endsem_report/fonts/`, then build with `tectonic main.tex`).
+
+Quick start: `build.bat test_gtx && bin\test_gtx.exe full` (correctness gate, sections A–H), then
+`build.bat bench && python scripts\campaign_v2.py && python scripts\summarize.py --dir results\v2`.
+Builds need MSVC (VS 2022 Community **or Build Tools** with the C++ workload) and CUDA 12.8.
+
+Engine switches added in 2026-11:
+- `--m4 {1,3,7}`: Method 4. `--sys gtx-m4` = `--m4 7`.
+- `--sys gtx-gs1`: 2× growth layout.
+- `--bulk 1`: degree-sized bulk loader.
+- `--batch B`: one launch per B transactions.
+- `--membreak 1`: per-category memory breakdown.

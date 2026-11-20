@@ -2,7 +2,10 @@
 rem Builds the GPMA+ benchmark twice on identical workload streams:
 rem   gpma_port.exe     - Windows port (dynamic-parallelism rebalancing flattened to a host loop)
 rem   gpma_upstream.exe - pristine upstream gpma_demo (commit 080aa6d) with legacy CDP1 dynamic parallelism
-call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" >nul
+set "VCV=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+if not exist "%VCV%" set "VCV=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+if not exist "%VCV%" (echo vcvars64.bat not found & exit /b 1)
+call "%VCV%" >nul
 set B=C:\Vivek\RM\gpu-stm-dynamic-graphs\baselines
 set H=%~dp0
 if not exist "%H%..\..\bin" mkdir "%H%..\..\bin"

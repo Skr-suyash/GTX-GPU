@@ -1,0 +1,135 @@
+GTX-GPU DEMO COMMANDS  (benchmarks on slides 13 and 14 of "RM Presentation New.pdf")
+=====================================================================================
+
+0. BEFORE THE DEMO
+------------------
+- Plug the laptop in. On battery the GPU throttles and the numbers come out lower than on the slides.
+- Close anything else using the GPU.
+- Easiest way: double-click  demo_start.bat  (checks GPU + binaries, then shows a menu).
+- Or open a terminal and run the commands below from this folder:
+
+    cd /d C:\Vivek\RM\gtx-gpu-research
+
+- Numbers vary by a few percent between runs. The slides show the median of 5 runs.
+
+
+1. READABLE OUTPUT (recommended for a live demo)
+------------------------------------------------
+Each command runs the benchmark 3 times, prints the median as a table, and shows what the slide says to expect.
+
+    python scripts\demo.py list              list all scenarios
+
+  Slide 13 (GTX-GPU vs "GTX rules"):
+    python scripts\demo.py k32-uniform       the 1.8x and 45% -> 0% aborts result
+    python scripts\demo.py k32-hub           the 1.3x on the hub result
+    python scripts\demo.py k8-uniform
+    python scripts\demo.py k8-hub
+    python scripts\demo.py k1-uniform        the ~181 M inserts/s point
+
+  Slide 14 (mixed 40% insert / 30% delete / 30% read, K=4):
+    python scripts\demo.py mixed-uniform     ~50.9 M txn/s
+    python scripts\demo.py mixed-hub         ~50.5 M txn/s
+    python scripts\demo.py mixed-zipf        ~34.8 M txn/s
+    python scripts\demo.py churn-uniform     ~156 M edge changes/s  (the "144-156 M" box)
+    python scripts\demo.py churn-rmat        ~144 M edge changes/s
+
+  Everything at once (about 2 minutes):
+    python scripts\demo.py all
+
+  Use 5 repetitions like the slides:  add  --reps 5
+
+
+2. RAW BENCHMARK COMMANDS (what demo.py runs underneath)
+--------------------------------------------------------
+--sys gtx       = GTX-GPU (ours)
+--sys gtx-cons  = "GTX rules" (same engine, GTX's original per-chain conflict rule, no warp aggregation)
+--V vertices   --N transactions   --K operations per transaction   --init initial edges
+--pins/--pdel/--pread  operation mix   --src hub --hub 0.5 = half of the operations hit vertex 0
+
+  Slide 13, uniform inserts, K=32:
+    bin\bench.exe --sys gtx      --label demo --reps 5 --V 1048576 --init 4000000 --N 32768 --K 32 --pins 1
+    bin\bench.exe --sys gtx-cons --label demo --reps 5 --V 1048576 --init 4000000 --N 32768 --K 32 --pins 1
+
+  Slide 13, 50% hub inserts, K=32:
+    bin\bench.exe --sys gtx      --label demo --reps 5 --V 1048576 --init 4000000 --N 32768 --K 32 --src hub --hub 0.5 --pins 1
+    bin\bench.exe --sys gtx-cons --label demo --reps 5 --V 1048576 --init 4000000 --N 32768 --K 32 --src hub --hub 0.5 --pins 1
+
+  Other K values: keep N x K = 1048576
+    K=1 -> --N 1048576    K=2 -> --N 524288    K=4 -> --N 262144    K=8 -> --N 131072    K=32 -> --N 32768
+
+  Slide 14, mixed transactions:
+    bin\bench.exe --sys gtx --label demo --reps 5 --V 1048576 --init 4000000 --N 262144 --K 4 --pins .4 --pdel .3 --pread .3
+    bin\bench.exe --sys gtx --label demo --reps 5 --V 1048576 --init 4000000 --N 262144 --K 4 --src hub --hub 0.5 --pins .4 --pdel .3 --pread .3
+    bin\bench.exe --sys gtx --label demo --reps 5 --V 1048576 --init 4000000 --N 262144 --K 4 --src zipf --zipf 1.0 --pins .4 --pdel .3 --pread .3
+
+  Slide 14, churn K=1:
+    bin\bench.exe --sys gtx --label demo --reps 5 --V 1048576 --init 4000000 --N 1048576 --K 1 --pins .5 --pdel .5
+    bin\bench.exe --sys gtx --label demo --reps 5 --V 1048576 --init 4000000 --N 1048576 --K 1 --src rmat --pins .5 --pdel .5
+
+  How to read a RESULT line (comma separated):
+    RESULT, label, system, repetition, KERNEL_MS, COMMITS, ABORTS, give-ups, EFFECTIVE_EDGE_CHANGES, no-ops,
+    TXN_PER_SECOND, EDGE_CHANGES_PER_SECOND, latency p50/p95/p99 (microseconds), ...
+    abort ratio = ABORTS / (COMMITS + ABORTS)
+
+
+3. CORRECTNESS ("48/48 adversarial histories pass" on the conclusion slide)
+---------------------------------------------------------------------------
+  Show the saved result (instant):
+    findstr /c:"RESULT" /c:"witnessed" results\correctness_suite.txt
+    findstr /c:"as expected" results\correctness_suite.txt | find /c /v ""        (prints 55)
+
+  One run verified live by the history checker (about 15 s; last-but-one column must say PASS):
+    python scripts\demo.py checked --reps 1
+
+  Write-skew probe + three deliberately broken protocols the checker must reject (about 2 minutes):
+    bin\test_gtx.exe full none
+      - "write-skew SI"  shows the anomaly, "write-skew SER" shows none
+      - mut1 / mut2 / mut3 lines end in  checker=FAIL [as expected]
+      - last line:  RESULT: ALL AS EXPECTED
+
+  Full suite, all 48 histories (20-30 minutes - do NOT run live):
+    bin\test_gtx.exe full
+
+
+4. SHOW RECORDED RESULTS WITHOUT RUNNING ANYTHING
+-------------------------------------------------
+    notepad results\summary.md                 every scenario, all systems
+    notepad report.md                          full results report
+    findstr /r /c:"^uniform-ins-K[0-9]*,gtx" /c:"^hub50-ins-K[0-9]*,gtx" results\summary.csv       slide 13 rows
+    findstr /r /c:"^SI-.*-rw-K4,gtx," /c:"churn-K1,gtx," results\summary.csv                       slide 14 rows
+
+
+5. WHERE THINGS ARE IN THE CODE (if asked)
+------------------------------------------
+    Workload generator (same stream for every system)      src\workload.hpp   makeWorkload
+    Scenario definitions                                   scripts\run_matrix.py   matrix()
+    GPU kernel (transaction loop, retries)                 src\gtxg.cuh   kRun, attempt
+    Lock-free write: check then CAS (slide 12)             src\gtxg.cuh   install
+    GTX's per-chain rule vs our per-edge rule              src\gtxg.cuh   walkChain  ("GTX rule" comment)
+    One atomic per warp (slide 11)                         src\gtxg.cuh   the vfill fetch_add in attempt
+    Block growth without copying (slide 10)                src\gtxg.cuh   allocBlock
+    "GTX rules" switch                                     src\bench.cu   sys == "gtx-cons"
+    Timing (CUDA events around the kernel only)            src\gtxg.cuh   Store::run
+    Median / abort ratio                                   scripts\summarize.py
+    History checker                                        src\checker.hpp   checkHistory
+
+
+6. IF SOMETHING BREAKS
+----------------------
+  Rebuild (about 1 minute each; needs Visual Studio 2022 + CUDA 12.8):
+    build.bat bench
+    build.bat test_gtx
+
+  "python not found": run the raw commands in section 2 instead.
+  Numbers far lower than the slides: laptop is on battery or another program is using the GPU.
+  A run prints FLAG=... : the run hit a memory or time limit and is not valid; rerun it.
+
+NOTE (updated 2026-11-14):
+- scripts\demo.py was test-run on 2026-11-10 ("python scripts\demo.py all"): every scenario ran, and the checked run
+  says PASS. demo_start.bat was NOT verified interactively: a test with piped input looped and was stopped.
+  Double-click it once while plugged in before the presentation.
+- The "expected" values are the 2026-09 slide numbers. On this laptop in 2026-11 every kernel runs ~1.3-1.7x faster
+  (system change; cause not isolated, see protocol). The GTX-GPU vs "GTX rules" ratios and abort rates are unchanged.
+- Section 3 refers to the 2026-09 suite (results\correctness_suite.txt, 55 "as expected" lines). The current gate is
+  results\v2\correctness_suite.txt: 109 cases, sections A-H. Run "bin\test_gtx.exe full" for it (do NOT run it live).
+- Current numbers and the final report: report.md Part A and results\v2\.

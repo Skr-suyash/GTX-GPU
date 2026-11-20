@@ -10,10 +10,13 @@ import csv, os, random, statistics, sys
 from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RAW = os.path.join(ROOT, "results", "raw.csv")
-ORDER = ["gtx", "gtx-cons", "gtx-coop-only", "gtx-dst-only", "2pl", "stm", "stm-nodeg", "nontx",
+# --dir DIR: read DIR/raw.csv (+ DIR/gpma_raw.csv) and write the summaries into DIR (default: results/, the 2026-09 run)
+OUTDIR = os.path.join(ROOT, sys.argv[sys.argv.index("--dir") + 1]) if "--dir" in sys.argv else os.path.join(ROOT, "results")
+RAW = os.path.join(OUTDIR, "raw.csv")
+ORDER = ["gtx", "gtx-m4", "gtx-gs1", "gtx-cons", "gtx-coop-only", "gtx-dst-only", "2pl", "stm", "stm-nodeg", "nontx",
          "gpma-upstream", "gpma-port"]
-NAMES = {"gtx": "GTX-GPU (ours)", "gtx-cons": "GTX-conservative port", "gtx-coop-only": "GTX coop only",
+NAMES = {"gtx": "GTX-GPU (ours)", "gtx-m4": "GTX-GPU + M4 merge/reuse", "gtx-gs1": "GTX-GPU, 2x growth layout",
+         "gtx-cons": "GTX-conservative port", "gtx-coop-only": "GTX coop only",
          "gtx-dst-only": "GTX dst-conflicts only", "2pl": "2PL vertex locks", "stm": "TL2 word-STM",
          "stm-nodeg": "TL2 word-STM (no degree)", "nontx": "non-transactional CAS",
          "gpma-upstream": "GPMA+ (upstream, CDP1)", "gpma-port": "GPMA+ (Windows port)"}
@@ -82,7 +85,7 @@ def main():
         else:
             lo, hi = boot_ratio(g, t[1])
             sp.append({"label": label, "vs": sysn, "speedup": f"{med(g) / med(t[1]):.2f}", "ci_lo": f"{lo:.2f}", "ci_hi": f"{hi:.2f}", "note": ""})
-    out = os.path.join(ROOT, "results")
+    out = OUTDIR
     keys = ["label", "sys", "status", "reps", "ms_median", "ms_min", "ms_max", "txn_per_s", "eff_per_s", "commits", "aborts",
             "abort_ratio", "giveup", "upd_p50_us", "upd_p99_us", "ro_p50_us", "ro_p99_us", "bytes", "check", "flag"]
     with open(os.path.join(out, "summary.csv"), "w", newline="") as f:

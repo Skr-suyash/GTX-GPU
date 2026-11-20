@@ -29,6 +29,8 @@ int main(int argc, char** argv) {
   p.roFrac = AD("ro", 0); p.roScan = AD("roscan", 0.1);
   p.src = A("src", "uniform"); p.hubFrac = AD("hub", 0); p.nHubs = (u32)AD("nhubs", 1); p.zipfS = AD("zipf", 1.0);
   p.hotEdges = (u32)AD("hot", 0); p.hotFrac = AD("hotfrac", 0); p.initEdges = (u32)AD("init", 0); p.seed = (u64)AD("seed", 1);
+  p.graph = A("graph", ""); p.initFrac = AD("initfrac", 0.8); p.fifoDel = (int)AD("fifodel", 0);
+  if (AD("rounds", 0)) p.N = (u32)(AD("rounds", 0) * AD("perround", 1 << 20));  // long run: the whole stream
   std::string sys = A("sys", "gtx"), label = A("label", "run");
   int reps = (int)AD("reps", 5), check = (int)AD("check", 0), ser = (int)AD("ser", 0);
   HostWorkload w = makeWorkload(p);
@@ -61,9 +63,80 @@ int main(int argc, char** argv) {
     cfg.coopScan = (int)AD("coopscan", 1);
     cfg.chRatio = (u32)AD("chratio", 1); cfg.minCap = (u32)AD("mincap", 8);
     cfg.growShift = (u32)AD("growshift", 3); cfg.prewalk = (int)AD("prewalk", 0); cfg.dbg = (int)AD("dbg", 0);
-    u32 arena = gtxArenaFor(w, cfg.minCap);
+    cfg.bulk = (int)AD("bulk", 0);
+    cfg.m4 = (int)AD("m4", 0); cfg.mergeMin = (u32)AD("mergemin", 64);
+    cfg.holdMin = (u32)AD("holdmin", 0); cfg.mergeOnOldGarbage = (int)AD("mergeoldgarb", 0);
+    if (sys == "gtx-m4") cfg.m4 = 7;                 // Method 4 (merge + reuse), default layout otherwise
+    if (sys == "gtx-gs1") cfg.growShift = 1;         // layout fallback: 2x growth, no M4
+    cfg.qcSlackPct = (u32)AD("qcslack", 0);
+    cfg.qcChunk = (u32)AD("qcchunk", 1); cfg.qcBigSlots = (u32)AD("qcbig", 4096);
+    if (AD("rounds", 0)) {  // long-running stream (M5): one launch per round; gtx-qc compacts between launches
+      LongRunCfg lr; lr.rounds = (u32)AD("rounds", 0); lr.perRound = (u32)AD("perround", 1 << 20);
+      lr.qc = sys == "gtx-qc" || AD("qc", 0); lr.checkEvery = (int)AD("checkevery", 0); lr.margin = AD("margin", 1.5); lr.qcEvery = (u32)AD("qcevery", 0);
+      u32 arena = (u32)AD("arena", 20000000);
+      u32 descCap = (u32)AD("desccap", 20000000);
+      double sumMs = 0, sumQc = 0; u64 commits = 0, eff = 0; size_t hw = 0; u32 lastRound = 0, nQc = 0; int oomRound = -1;
+      std::vector<float> pauses;
+      int bad = runLongRun(w, cfg, lr, arena, descCap, [&](const RoundOut& ro) {
+        if (ro.oom && oomRound < 0) oomRound = (int)ro.round;
+        hw = std::max(hw, ro.bytes); sumMs += ro.ms; sumQc += ro.qcMs; commits += ro.st[ST_COMMITS]; eff += ro.st[ST_EFFECTIVE];
+        if (ro.compacted) { nQc++; pauses.push_back(ro.qcMs); }
+        lastRound = ro.round;
+        printf("ROUND,%s,%s,%u,%.4f,%.4f,%u,%u,%u,%u,%zu,%u,%u,%u,%u,%llu,%d,%s,%u\n", label.c_str(), sys.c_str(), ro.round, ro.ms, ro.qcMs,
+               ro.st[ST_COMMITS], ro.st[ST_ABORTS], ro.st[ST_EFFECTIVE], ro.st[ST_ABORT_BASE + AB_RESOURCE], ro.bytes, ro.dTop, ro.hTop,
+               ro.bTop, ro.txTop, (unsigned long long)ro.live, ro.compacted, ro.check < 0 ? "-" : ro.check ? "PASS" : "FAIL", ro.st[ST_N - 1]);
+        if (!ro.fail.empty()) fprintf(stderr, "ROUND %u FAIL: %s\n", ro.round, ro.fail.c_str());
+        fflush(stdout);
+      });
+      std::sort(pauses.begin(), pauses.end());
+      double tot = (sumMs + sumQc) / 1000.0;
+      printf("LONGRUN,%s,%s,rounds_done=%u,oom_round=%d,commits=%llu,eff=%llu,kernel_ms=%.1f,qc_ms=%.1f,txn_per_s_e2e=%.1f,eff_per_s_e2e=%.1f,"
+             "highwater_MB=%.1f,compactions=%u,pause_p50_ms=%.2f,pause_max_ms=%.2f,checks=%s\n",
+             label.c_str(), sys.c_str(), lastRound + 1, oomRound, (unsigned long long)commits, (unsigned long long)eff, sumMs, sumQc,
+             commits / tot, eff / tot, hw / 1048576.0, nQc, pauses.empty() ? 0.0 : pauses[pauses.size() / 2],
+             pauses.empty() ? 0.0 : pauses.back(), lr.checkEvery ? (bad ? "FAIL" : "PASS") : "-");
+      return bad;
+    }
+    u32 arena = AD("arena", 0) ? (u32)AD("arena", 0) : gtxArenaFor(w, cfg.minCap);
     size_t descCap = (size_t)w.N() * 32 + w.initEdges.size() + (1 << 20); if (descCap > 100000000) descCap = 100000000;
     gtxg::Store S; S.init(w.V, arena, (u32)descCap, cfg);
+    const u32 batch = (u32)AD("batch", 0);
+    if (batch) {  // batch mode: one launch per `batch` transactions, frontier published between launches (GPMA-style)
+      DevWl d; d.upload(w);
+      for (int rep = -1; rep < reps; rep++) {
+        S.c.cfg = cfg; S.reset();
+        if (!w.initEdges.empty()) {
+          if (cfg.bulk) S.bulkLoad(w.initEdges);
+          else { HostWorkload lw = loaderWorkload(w); DevWl dl; dl.upload(lw); S.run(dl.off, dl.ops, dl.N, dl.res, dl.rec, nullptr); dl.release(); }
+          S.publishAll();
+        }
+        CK(cudaMemset(d.rec, 0, (size_t)d.N * sizeof(TxRecord)));
+        const u32 base = S.readCounter(S.c.txTop);  // first txid of the batched workload
+        u32 tot[ST_N] = {0}, st[ST_N]; float ms = 0; std::vector<double> per;
+        for (u32 s0 = 0; s0 < d.N; s0 += batch) {
+          u32 n = d.N - s0 < batch ? d.N - s0 : batch;
+          float m = S.run(d.off + s0, d.ops, n, d.res, d.rec + s0, st);
+          S.publishAll();
+          ms += m; per.push_back(m);
+          for (int i = 0; i < ST_N - 1; i++) tot[i] += st[i];
+          tot[ST_N - 1] |= st[ST_N - 1];
+        }
+        if (rep < 0) continue;
+        std::vector<TxRecord> rec(d.N); CK(cudaMemcpy(rec.data(), d.rec, (size_t)d.N * sizeof(TxRecord), cudaMemcpyDeviceToHost));
+        const char* chk = "-";
+        if (check && rep == reps - 1) {
+          std::vector<OpResult> res(d.nOps); CK(cudaMemcpy(res.data(), d.res, d.nOps * sizeof(OpResult), cudaMemcpyDeviceToHost));
+          CheckReport cr = checkStoreRun(S, w, cfg, res, rec, base);
+          chk = cr.ok ? "PASS" : "FAIL";
+          if (!cr.ok) fprintf(stderr, "CHECK FAIL: %s\n", cr.first.c_str());
+        }
+        emit(rep, ms, tot, rec, S.bytesUsed(), chk);
+        std::sort(per.begin(), per.end());
+        fprintf(stderr, "BATCH batch=%u launches=%zu p50_ms=%.4f p99_ms=%.4f\n", batch, per.size(), per[per.size() / 2], per[(size_t)(0.99 * (per.size() - 1))]);
+      }
+      d.release(); S.release();
+      return 0;
+    }
     for (int rep = -1; rep < reps; rep++) {
       bool doCheck = check && rep == reps - 1;
       RunOut o = runGtx(w, cfg, doCheck, &S);
@@ -71,6 +144,14 @@ int main(int argc, char** argv) {
       if (AD("prof", 0)) { double tot = 0; for (int i = 0; i < 6; i++) tot += o.stats[24 + i]; const char* nm[] = {"begin", "oploop", "install", "validate", "commit", "stamp"}; fprintf(stderr, "PROF"); for (int i = 0; i < 6; i++) fprintf(stderr, " %s=%.1f%%", nm[i], 100.0 * o.stats[24 + i] / (tot - o.stats[26])); fprintf(stderr, "\n"); }
       emit(rep, o.ms, o.stats, o.rec, o.bytes, doCheck ? (o.rep.ok ? "PASS" : "FAIL") : "-");
       if (doCheck && !o.rep.ok) fprintf(stderr, "CHECK FAIL: %s\n", o.rep.first.c_str());
+    }
+    if (AD("membreak", 0)) printMemBreak(label.c_str(), memBreakdown(S));
+    if (cfg.m4) {
+      u32 m[gtxg::M4_N]; S.m4Stats(m);
+      fprintf(stderr, "M4 trunc=%u merges=%u gensMerged=%u kept=%u linked=%u retired=%u freed=%u reused=%u ringFull=%u overflow=%u holds=%u lockBusy=%u\n",
+              m[gtxg::M4_TRUNC],
+              m[gtxg::M4_MERGES], m[gtxg::M4_GENS_MERGED], m[gtxg::M4_KEPT], m[gtxg::M4_LINKED], m[gtxg::M4_RETIRED], m[gtxg::M4_FREED],
+              m[gtxg::M4_REUSED], m[gtxg::M4_RING_FULL], m[gtxg::M4_OVERFLOW], m[gtxg::M4_HOLDS], m[gtxg::M4_LOCK_BUSY]);
     }
     S.release();
   } else {
